@@ -7,10 +7,11 @@
 #' @author Gabi Armada and Jenna Krall
 #' @examples
 #' file <- here("GPS data/100100.csv")
+#' # obtains ??
 #' GMU_commute(file, output = "df")
 #' GMU_commute(file, output = "trip summary")
 #' @export
-GMU_commute <- function(file, output){
+GMU_commute <- function(file, output = "df"){
   headers <- read.csv(file, header = F, nrows = 1, as.is = T)
   headers <- as.character(headers[, c(2:18)])
   df1 <- data.table::fread(file, skip = 3, select = c(2 : 18))
