@@ -53,3 +53,12 @@ GMU_commute <- function(file, output){
       return (df2)}
 }
 
+
+
+
+# outer function
+oGMU_commute <- function(fp){
+  lf <- list.files(fp)
+  GMU_commute(here(fp, lf[i]))
+
+}
