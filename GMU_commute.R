@@ -83,14 +83,17 @@ sums_only <- function(df2) {
     n_distinct()
 
   # trip summary (% missing)
-  trip_summaries <- summarize(df2, nrows = n(), sum = sum(missing), mean = mean(missing))
+  trip_summaries <- group_by(df2, Trip) %>%
+    summarize(., nrows = n(), sum = sum(missing), mean = mean(missing))
 
   # overall summary
   overall_summary<- ungroup(df2) %>%
     summarize(nrows = n(),
               sum = sum(missing),
               mean = round(mean(missing), digits = 3)) %>%
-    mutate(total_trips = total_trips, actual_trips = actual_trips)
+    mutate(total_trips = total_trips, actual_trips = actual_trips,
+           Trip = "Overall")
+
 
   full_join(overall_summary, trip_summaries)
 }
