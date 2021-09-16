@@ -24,6 +24,7 @@ plot( roadiness_in.r)
 # just grab leng.distm2, which is what I used in the paper for roadiness
 roadiness.r <- roadiness_in.r$leng.distm2_scale
 plot( roadiness.r)
+save(roadiness.r, file = here("data/roadinessr.RData"))
 
 # convert to sf object for easy plotting
 roadiness.sf <- st_as_sf( rasterToPolygons( roadiness.r))
