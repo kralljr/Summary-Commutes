@@ -28,3 +28,5 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
 
     - Input: points_gricell.Rdata
     - Creates: roadiness_commutes.Rdata
+    
+X. check-roadiness-cells.R: Checking file with maps to verify NA cells
