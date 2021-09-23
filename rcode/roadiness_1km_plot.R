@@ -38,11 +38,13 @@ counties_use <- data.table( state_abbr = c( rep( 'DC', 1),
                                             rep( 'VA', 16),
                                             rep( 'WV', 1)),
                             name = c( 'District of Columbia',
+                                      # MD
                                       'Calvert',
                                       'Charles',
                                       'Frederick',
                                       'Montgomery',
                                       "Prince George's",
+                                      ####
                                       'Alexandria',
                                       'Arlington',
                                       'Clarke',
