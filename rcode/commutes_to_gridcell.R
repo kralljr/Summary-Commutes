@@ -68,7 +68,4 @@ points_gridcell <- points_gridcell[,-1]%>%
 points_gridcell <- points_gridcell%>%
                       relocate(c("Longitude", "Latitude"), c(1,2))
 
-# keep only points in NOVA
-points_gridcell <- filter(points_gridcell, !is.na(leng.distm2_scale))
-
 save(points_gridcell, file = here("data/points_gricell.Rdata"))
