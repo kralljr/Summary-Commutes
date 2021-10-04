@@ -1,0 +1,104 @@
+---
+title: 'Roadiness: first analysis'
+author: "Jenna Krall"
+date: "10/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(knitr)
+library(here)
+library(lme4)
+library(broom.mixed)
+library(ggthemes)
+```
+
+
+```{r}
+# load data
+load(here("data/rcomm.RData"))
+```
+
+# Explore
+
+
+```{r adjust}
+rcomm <- filter(rcomm, PM < 25)
+rcomm <- mutate(rcomm, aPM = PM - daily, aPM2 = PM + hourly, aPMall = aPM + hourly)
+
+rcomm1 <- select(rcomm, ID, rdatetime, rness, PM, aPM : aPMall) %>%
+  pivot_longer(PM : aPMall)
+
+```
+
+
+```{r}
+ggplot(rcomm1, aes(x = value)) + geom_histogram() +
+  facet_wrap(~name)
+ggplot(rcomm1, aes(x = value)) + geom_boxplot() +
+  facet_wrap(~name)
+
+ggplot(rcomm1, aes(x = log(value + 1))) + geom_boxplot() +
+  facet_wrap(~name)
+
+group_by(rcomm1, name) %>% 
+  summarize(mean = mean(value), sd = sd(value),
+            median = median(value), IQR = IQR(value),
+            q25 = quantile(value, probs = 0.25), 
+            q75 = quantile(value, probs = 0.75),
+            min = min(value), max = max(value))
+```
+
+```{r}
+
+ggplot(rcomm1, aes(x = rness, y = value)) +
+   geom_point() +geom_smooth() +
+  facet_wrap(~name)
+
+```
+# Try regression
+
+```{r}
+lmer1 <- with(rcomm, lmer(PM ~ rness +  (1 | ID))) %>% tidy(conf.int = T) %>%
+  mutate(model = "Unadjusted")
+
+lmer2 <- with(rcomm, lmer(PM ~ rness + daily  + (1 | ID))) %>% tidy(conf.int = T)%>%
+  mutate(model = "DailyAdj")
+
+plot(resid(lmer2) ~ rcomm$rness)
+lmer4 <- with(rcomm, lmer(PM ~ rness + daily + hourly  + (1 | ID))) %>% tidy(conf.int = T)%>%
+  mutate(model = "HourlyAdj")
+
+
+lmerd <- with(rcomm, lmer(aPM ~ rness + (1 | ID))) %>% tidy(conf.int = T) %>%
+  mutate(model = "DiffDailyAdj")
+lmerd2 <- with(rcomm, lmer(aPM2 ~ rness + (1 | ID))) %>% tidy(conf.int = T) %>%
+  mutate(model = "DiffTimeAdj")
+lmerd3 <- with(rcomm, lmer(aPMall ~ rness + (1 | ID))) %>% tidy(conf.int = T) %>%
+  mutate(model = "DiffDTAdj")
+# windows?
+
+lmerall <- full_join(lmer1, lmer2) %>%  full_join(., lmer4) %>%
+  full_join(., lmerd) %>% full_join(., lmerd2) %>% full_join(., lmerd3) %>%
+  filter(term == "rness")
+```
+
+
+```{r, fig.height = 3, fig.width = 4}
+ggplot(lmerall, aes(y = model, x = estimate, colour = model)) + 
+  geom_pointrange(aes(xmin = conf.low, xmax = conf.high)) +
+  scale_color_colorblind() +
+  ylab("") + xlab("Change in PM2.5 with increased roadiness") +
+  geom_vline(xintercept = 0, linetype =2, colour = "grey50") +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+
+
