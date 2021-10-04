@@ -18,6 +18,12 @@ cdat0 <- filter(gpslatlon$dat, missing == 1) %>%
   mutate(datetime= as_datetime(datetime, format = "%d %B %Y %H:%M:%S", tz = "UTC"),
          rdatetime = round_date(datetime, unit = "minute"))
 
+tripdata <- mutate(cdat0, tripid = paste0(ID, Trip)) %>%
+  arrange(tripid, datetime) %>%
+  select(tripid, Latitude, Longitude)
+save(tripdata, file = here("data/tripdata.RData"))
+# 154 trips
+
 # bind columns:
 # THESE ARE THE SAME ORDER (ORDER PULLED FROM GPSLATLON)
 cdat0 <- bind_cols(cdat0, points_gridcell[, -c(1, 2)])
