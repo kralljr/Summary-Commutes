@@ -18,17 +18,18 @@ cdat0 <- filter(gpslatlon$dat, missing == 1) %>%
   mutate(datetime= as_datetime(datetime, format = "%d %B %Y %H:%M:%S", tz = "UTC"),
          rdatetime = round_date(datetime, unit = "minute"))
 
-tripdata <- mutate(cdat0, tripid = paste0(ID, Trip)) %>%
-  arrange(tripid, datetime) %>%
-  select(tripid, Latitude, Longitude)
-save(tripdata, file = here("data/tripdata.RData"))
-# 154 trips
 
 # bind columns:
 # THESE ARE THE SAME ORDER (ORDER PULLED FROM GPSLATLON)
 cdat0 <- bind_cols(cdat0, points_gridcell[, -c(1, 2)])
 # remove PA
 cdat0 <- filter(cdat0, !is.na(leng.distm2_scale))
+
+tripdata <- mutate(cdat0, tripid = paste0(ID, Trip)) %>%
+  arrange(tripid, datetime)
+save(tripdata, file = here("data/tripdata.RData"))
+# 154 trips
+
 cdat <- cdat0 %>% mutate(rdatetime = as_datetime(rdatetime, tz = "America/New_York")) %>%
   rename(rness = leng.distm2_scale) %>%
   # remove latitude and longitude
