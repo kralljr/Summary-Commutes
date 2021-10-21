@@ -17,6 +17,8 @@ library(here)
 library(lme4)
 library(broom.mixed)
 library(ggthemes)
+library(nlme)
+
 ```
 
 
@@ -71,9 +73,17 @@ lmer1 <- with(rcomm, lmer(PM ~ rness +  (1 | ID))) %>% tidy(conf.int = T) %>%
 lmer2 <- with(rcomm, lmer(PM ~ rness + daily  + (1 | ID))) %>% tidy(conf.int = T)%>%
   mutate(model = "DailyAdj")
 
-plot(resid(lmer2) ~ rcomm$rness)
-lmer4 <- with(rcomm, lmer(PM ~ rness + daily + hourly  + (1 | ID))) %>% tidy(conf.int = T)%>%
+
+lmer4 <- with(rcomm, lmer(PM ~ rness + daily + hourly  + (1 | ID)))
+almer4 <- augment(lmer4)
+ggplot(almer4, aes(x = rness, y = .resid)) + geom_point()
+ggplot(almer4, aes(x = .resid)) + geom_histogram()
+
+
+lmer4 <- lmer4 %>% tidy(conf.int = T)%>%
   mutate(model = "HourlyAdj")
+
+
 
 
 lmerd <- with(rcomm, lmer(aPM ~ rness + (1 | ID))) %>% tidy(conf.int = T) %>%
@@ -102,3 +112,63 @@ ggplot(lmerall, aes(y = model, x = estimate, colour = model)) +
 
 
 
+
+
+```{r}
+# AR1? corARMA?
+
+cs1 <- corAR1(form = ~1|ID/group)
+# cs1 <- corARMA(form = ~ 1|ID/group, p = 5, q = 5)
+cs1 <- Initialize(cs1, data = rcomm)
+
+rcomm <- mutate(rcomm, lPM = log(PM),
+                mrness = mean(rness), sdrness = sd(rness),
+                srness = (rness - mrness) / sdrness) 
+
+lme1b <- lme(PM ~ srness + ID, random=~1|ID/group, data=rcomm)
+AIC(lme1b)
+
+lme1b %>% tidy()
+
+lme1b <- augment(lme1b)
+
+
+hist(lme1b$.resid)
+plot(lme1b$.fitted, lme1b$.resid)
+plot(lme1b$srness, lme1b$.resid)
+
+
+ggplot(lme1b, aes(x = rness, y = .resid, colour = hourly)) + geom_point()
+```
+
+# compare lme, nlme
+```{r}
+lme2 <- lmer(PM ~ rness + (1 | ID) + (1 | ID: group), data = rcomm)
+lme2 %>% tidy()
+
+lme1 <- lme(PM ~ rness, random=~1|ID/group, data=rcomm)
+lme1 %>% tidy
+
+# fixed effect for ID
+lme2 <- lmer(lPM ~ rness + ID +  (1 | ID: group), data = rcomm)
+lme2 <- lme2 %>% tidy(conf.int = T)
+
+lme1 <- lme(lPM ~ rness + ID, random=~1|ID/group, data=rcomm)
+lme1 <- lme1 %>% tidy(conf.int = T)
+
+lme1 <- mutate(lme1, type = "lme")
+lme2 <- mutate(lme2, type = "lmer")
+lmeall <- full_join(lme1, lme2)
+
+ggplot(lmeall, aes(x = term, y = estimate, colour = type)) +
+  geom_point(position = position_dodge(1)) +
+  theme(axis.text.x= element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+# check distribution of PM
+
+```{r}
+ggplot(rcomm, aes(y = PM, x = rness, colour = ID)) + geom_point()
+ggplot(rcomm, aes(y = log(PM + 0.2), x = ID, colour = ID)) + geom_violin() +
+  theme(legend.position = "none")
+```
