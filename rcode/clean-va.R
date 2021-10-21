@@ -2,6 +2,7 @@
 library(tidyverse)
 library(here)
 library(readxl)
+library(lubridate)
 
 # load data
 load(here("data/va_monitor_data.RData"))
@@ -20,17 +21,21 @@ va <- filter(va_monitor_data, county_code %in% c("013", "059")) %>%
 #################################
 # dates for GEST-DC
 dates <- read_excel("~/Dropbox/GESTDC/data/metals-metadata/GMU_RTI_Metadata-loq-23oct19.xlsx") %>%
-  filter(substr(FilterID, 1, 2) == "GM", FilterID != "GMU1025") %>%
-  select(strt_date, stp_date) %>%
-  mutate(mid = as.numeric(stp_date - strt_date),
+  dplyr::filter(substr(FilterID, 1, 2) == "GM", FilterID != "GMU1025") %>%
+  dplyr::select(strt_date, stp_date) %>%
+  dplyr::mutate(stp_date= ifelse(stp_date == as_datetime("2018-01-18"), as_datetime("2019-01-18"), stp_date),
+                stp_date = as_datetime(stp_date),
+                mid = as.numeric(stp_date - strt_date),
          stp_date = date(stp_date),
          strt_date = date(strt_date),
          mid = ifelse(mid == 2, strt_date + days(1), strt_date),
          mid = as.Date(mid, origin = "1970-01-01")) %>%
   rowid_to_column() %>%
   pivot_longer(-rowid) %>%
-  select(value) %>% unique() %>%
+  dplyr::select(value) %>% unique() %>%
   mutate(gestdc = 1)%>% rename(date_local = "value")
+
+save(dates, file = here("data/gestdc-dates.RData"))
 
 
 ######################
