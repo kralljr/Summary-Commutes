@@ -22,11 +22,30 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
 
     - Input: roadinessr.RData, unique_commutes_df
     - Creates: points_gricell.Rdata: Roadiness for each lat/lon
-    - something wrong here
-    
-6. roadiness_dataset.R: Merge with full GEST-DC commute dataset
 
-    - Input: points_gricell.Rdata
-    - Creates: roadiness_commutes.Rdata
+6. find-roads.R: 
+
+    - Input: gpslatlon.RData (GPS GEST DC data to Lucas), Road types from Lucas: gps_road_assigned.csv
+    - Output: Revised complete GESTDC lat/lon latlon.RData, Road types: rtypes.RData
+    
+7. roadiness_dataset.R: Merge with full GEST-DC commute dataset
+
+    - Input: points_gricell.Rdata, pm-cont-data-1minrti.RData (RTI adjusted PM), rtypes.RData
+    - Creates: roadiness_commutes.Rdata (rtype is mode, rtype2 is mean)
+    
+8. clean-va.R: File to get PM for daily VA, hourly avg
+
+    - Input: va_monitor_data.RData, GMU_RTI_Metadata-loq-23oct19.xlsx (dates for GEST DC), 
+    - Output: vah.RData (hourly), va24.RData (24 avg)
+    
+9. weather.R: File to clean weather data
+
+    - Input: API key, GEST DC dates (gestdc-dates.RData)
+    - Output: weather-cleaned.RData
+
+10. adjust-pm.R: File to incorporate potential adjustment variables (daily PM, weather etc)
+
+    - Input: roadiness_commutes.Rdata, vah.RData (hourly averages VA PM), va24.RData (daily PM), weather-cleaned.RData (weather data)
+    - Output: rcomm.RData
     
 X. check-roadiness-cells.R: Checking file with maps to verify NA cells
