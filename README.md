@@ -36,7 +36,7 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
 8. clean-va.R: File to get PM for daily VA, hourly avg
 
     - Input: va_monitor_data.RData, GMU_RTI_Metadata-loq-23oct19.xlsx (dates for GEST DC), 
-    - Output: vah.RData (hourly), va24.RData (24 avg)
+    - Output: vah.RData (hourly + seasonal/hourly, separate dataset with obs hourly: vah0), va24.RData (24 avg)
     
 9. weather.R: File to clean weather data
 
@@ -45,7 +45,7 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
 
 10. adjust-pm.R: File to incorporate potential adjustment variables (daily PM, weather etc)
 
-    - Input: roadiness_commutes.Rdata, vah.RData (hourly averages VA PM), va24.RData (daily PM), weather-cleaned.RData (weather data)
+    - Input: roadiness_commutes.Rdata, vah.RData (hourly averages VA PM, hourly+season, observed), va24.RData (daily PM), weather-cleaned.RData (weather data)
     - Output: rcomm.RData
     
 X. check-roadiness-cells.R: Checking file with maps to verify NA cells
