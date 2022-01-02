@@ -20,7 +20,10 @@ rcomm <- data.frame(rcomm0) %>% dplyr::filter(PM < 250) %>%
          # time_local not averaged
          #rounddate = round_date(rdatetime, unit = "hour"),
          rounddate = rdatetime,
-         time_local = hour(rounddate), time_local = time_local + 1,
+         # EPA time is start of monitoring period
+         time_local = hour(rounddate),
+         # assumes hourly monitors capture preceding hour
+         #time_local = time_local + 1,
          time_local = ifelse(time_local == 24, 0, time_local)) %>%
   left_join(., va24) %>%
   left_join(., vah) %>%
