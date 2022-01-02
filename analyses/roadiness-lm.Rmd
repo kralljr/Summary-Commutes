@@ -116,16 +116,49 @@ ggplot(lmerall, aes(y = model, x = estimate, colour = model)) +
 
 ```{r}
 # AR1? corARMA?
-
-cs1 <- corAR1(form = ~1|ID/group)
-# cs1 <- corARMA(form = ~ 1|ID/group, p = 5, q = 5)
-cs1 <- Initialize(cs1, data = rcomm)
-
+#rcomm0 <- rcomm
 rcomm <- mutate(rcomm, lPM = log(PM),
                 mrness = mean(rness), sdrness = sd(rness),
                 srness = (rness - mrness) / sdrness) 
 
-lme1b <- lme(PM ~ srness + ID, random=~1|ID/group, data=rcomm)
+rcomm <- group_by(rcomm, ID, date_local, group) %>%
+  # start time for each
+  mutate(stime = min(rdatetime),
+         timemin = as.numeric((rdatetime - stime)/60)) %>%
+  filter(!is.na(srness))
+
+# all commutes nested within person only
+cs1 <- corAR1(form = ~timemin |ID/id3)
+# cs1 <- corARMA(form = ~timemin |ID/id3, p = 1, q = 2)
+cs1 <- Initialize(cs1, data = rcomm)
+
+lme1b <- lme(PM ~ srness , random=~timemin|ID/id3, data=rcomm, correlation= cs1)
+
+# explore autocor of residuals
+ACF(lme1b, resType = "normalized") %>% plot()
+
+
+lme0 <- lme(PM ~ srness + daily + obs, random=~1|ID/id3, data=rcomm)
+
+# RE per trip
+cs1 <- corAR1(form = ~1| id2)
+# cs1 <- corARMA(form = ~ 1|ID/group, p = 5, q = 5)
+cs1 <- Initialize(cs1, data = rcomm)
+
+lme1c <- lme(PM ~ srness, random=~1|id2, data=rcomm, correlation= cs1)
+
+
+
+
+cs1 <- corAR1(form = ~1|ID/date_local/group)
+# cs1 <- corARMA(form = ~ 1|ID/group, p = 5, q = 5)
+cs1 <- Initialize(cs1, data = rcomm)
+
+lme1d <- lme(PM ~ srness, random=~1|ID/date_local/group, data=rcomm, correlation= cs1)
+
+
+# explore autocor of residuals
+ACF(lme0) %>% plot()
 AIC(lme1b)
 
 lme1b %>% tidy()
