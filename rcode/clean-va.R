@@ -123,9 +123,9 @@ vah0 <- filter(va, sample_duration != "24 HOUR") %>%
   na.omit() %>%
   group_by(date_local) %>%
   # daily mean from hourly monitors
-  mutate(mean = mean(hourly)) %>% ungroup() %>%
+  mutate(hourmean = mean(hourly)) %>% ungroup() %>%
   # subtract off regional effect
-  mutate(diff = hourly - mean) %>%
+  mutate(diff = hourly - hourmean) %>%
   group_by(time_local, month) %>%
   mutate(meanS = mean(diff)) %>%
   ungroup() %>%
@@ -162,8 +162,8 @@ load(here("data/gestdc-dates.RData"))
 # all dates available
 join1 <- left_join(dates, vah0)
 
-vah0 <- rename(vah0, obshour = hourly) %>%
-  select(date_local, time_local, diff)
+vah0 <- rename(vah0, obshour = hourly, obsdiff = diff) %>%
+  select(date_local, time_local, obsdiff, hourmean)
 
 
 
