@@ -3,7 +3,7 @@
 library(tidyverse)
 library(lubridate)
 library(here)
-
+library(DescTools)
 
 ## ============================================
 #  get roadiness gridcell data :
@@ -38,7 +38,7 @@ cdat <- cdat0 %>% mutate(rdatetime = as_datetime(rdatetime, tz = "America/New_Yo
   # remove latitude and longitude
   dplyr::select(ID, rdatetime, rness, TNMFRC) %>%
   group_by(ID, rdatetime) %>%
-  summarize(rness = mean(rness), rtype = mode(TNMFRC), rtype2 = mean(TNMFRC)) %>%
+  summarize(rness = mean(rness), rtype = Mode(TNMFRC), rtype2 = mean(TNMFRC)) %>%
   unique()
 
 
