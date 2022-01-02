@@ -114,29 +114,60 @@ save(va24, file = here("data/va24.RData"))
 ############################################
 # Hourly concentrations (for hourly effects)
 # only one monitor (springfield)
-vah <- filter(va, sample_duration != "24 HOUR") %>%
+vah0 <- filter(va, sample_duration != "24 HOUR") %>%
   select(date_local, time_local, sample_measurement) %>%
   rename(hourly = sample_measurement) %>%
-  mutate(date_local = as.Date(date_local), time_local = as.numeric(substr(time_local, 1, 2)))%>%
+  mutate(month = substr(date_local, 6, 7), month = factor(month),
+         date_local = as.Date(date_local), time_local = as.numeric(substr(time_local, 1, 2)))%>%
   #left_join(., va24a) %>%
   na.omit() %>%
   group_by(date_local) %>%
+  # daily mean from hourly monitors
   mutate(mean = mean(hourly)) %>% ungroup() %>%
   # subtract off regional effect
   mutate(diff = hourly - mean) %>%
+  group_by(time_local, month) %>%
+  mutate(meanS = mean(diff)) %>%
+  ungroup() %>%
   group_by(time_local) %>%
   mutate(mean = mean(diff))
+
+vah <- vah0
 
 # not large temporal/hourly effects
 ggplot(vah) +
   geom_line(aes(x = time_local, y = diff, group = date_local), alpha = 0.1) +
   geom_line( aes(x = time_local, y = mean), colour = "red")
 
-vah <- select(vah, time_local, mean) %>%
-  rename(hourly = mean) %>%
+# by month
+ggplot(vah) +
+  geom_line(aes(x = time_local, y = diff, group = date_local), alpha = 0.1) +
+  geom_line( aes(x = time_local, y = meanS), colour = "red") +
+  facet_wrap(~month)
+
+# by month
+vah2 <- mutate(vah, month = as.numeric(month))
+ggplot(vah2) +
+  geom_line( aes(x = time_local, y = meanS, colour = month, group = month)) +
+  geom_line(aes(x = time_local, y = mean), colour = "red")
+
+
+vah <- select(vah, time_local, month, mean, meanS) %>%
+  rename(hourly = mean, hourlymonth = meanS) %>%
   unique()
 
-save(vah, file = here("data/vah.RData"))
+
+# availability on GEST DC dates?
+load(here("data/gestdc-dates.RData"))
+# all dates available
+join1 <- left_join(dates, vah0)
+
+vah0 <- rename(vah0, obshour = hourly)
+
+
+
+save(vah, vah0, file = here("data/vah.RData"))
+
 
 # only started in 2020
 # vah1 <- filter(va, site_number == "0030", county_code == "059",
