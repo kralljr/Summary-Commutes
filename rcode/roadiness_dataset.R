@@ -1,9 +1,9 @@
 # create Roadiness dataset
 
-library(tidyverse)
 library(lubridate)
 library(here)
 library(DescTools)
+library(tidyverse)
 
 ## ============================================
 #  get roadiness gridcell data :
@@ -22,7 +22,7 @@ cdat0 <- filter(gpslatlon$dat, missing == 1) %>%
 
 # bind columns:
 # THESE ARE THE SAME ORDER (ORDER PULLED FROM GPSLATLON)
-rtypes <- select(rtypes, TNMFRC)
+rtypes <- dplyr::select(rtypes, TNMFRC)
 cdat0 <- bind_cols(cdat0, points_gridcell[, -c(1, 2)]) %>%
   bind_cols(., rtypes)
 # remove PA
@@ -33,12 +33,16 @@ tripdata <- mutate(cdat0, tripid = paste0(ID, Trip)) %>%
 save(tripdata, file = here("data/tripdata.RData"))
 # 154 trips
 
+lev1 <- c(seq(1, 5), 8)
+lab1 <- c("High/SecHigh", "High/SecHigh","LocalConn", "Local", "Other", "Other")
+
 cdat <- cdat0 %>% mutate(rdatetime = as_datetime(rdatetime, tz = "America/New_York")) %>%
   rename(rness = leng.distm2_scale) %>%
   # remove latitude and longitude
   dplyr::select(ID, rdatetime, rness, TNMFRC) %>%
   group_by(ID, rdatetime) %>%
-  summarize(rness = mean(rness), rtype = Mode(TNMFRC), rtype2 = mean(TNMFRC)) %>%
+  summarize(rness = mean(rness), rtype = Mode(TNMFRC),
+            rtype = factor(rtype, levels= lev1, labels = lab1)) %>%
   unique()
 
 
@@ -68,7 +72,7 @@ rcomm <- mutate(rcomm, date = date(rdatetime)) %>%
   ungroup() %>%
   group_by(ID, date, cum1) %>%
   mutate(obs = n()) %>%
-  select(-c(diff, lag1)) %>%
+  dplyr::select(-c(diff, lag1)) %>%
   mutate(id2 = paste(ID, date, cum1), row = row_number()) %>%
   # commutes of at least 15 minutes
   filter(obs >= 15, !is.na(PM)) %>%
