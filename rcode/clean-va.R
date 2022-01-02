@@ -117,7 +117,7 @@ save(va24, file = here("data/va24.RData"))
 vah0 <- filter(va, sample_duration != "24 HOUR") %>%
   select(date_local, time_local, sample_measurement) %>%
   rename(hourly = sample_measurement) %>%
-  mutate(month = substr(date_local, 6, 7), month = factor(month),
+  mutate(month = substr(date_local, 6, 7), month = as.numeric(month),
          date_local = as.Date(date_local), time_local = as.numeric(substr(time_local, 1, 2)))%>%
   #left_join(., va24a) %>%
   na.omit() %>%
