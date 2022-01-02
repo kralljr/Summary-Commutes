@@ -37,7 +37,7 @@ rcomm <- data.frame(rcomm0) %>% dplyr::filter(PM < 250) %>%
          group = cumsum(diff1),
          id2 = paste0(ID, date_local, group),
          id3 = paste(date_local, group)) %>%
-  select(-c(diff, diff1, lag2)) %>%
+  dplyr::select(-c(diff, diff1, lag2)) %>%
   ungroup()
 
 
