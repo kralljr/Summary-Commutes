@@ -28,12 +28,15 @@ rcomm <- data.frame(rcomm0) %>% dplyr::filter(PM < 250) %>%
          month = month(rdatetime)) %>%
   left_join(., va24) %>%
   left_join(., vah) %>%
+  left_join(., vah0) %>%
   left_join(., weather) %>%
   group_by(ID, date_local) %>%
   mutate(lag2 = lag(rdatetime), diff = as.numeric(rdatetime - lag2),
          diff1 = ifelse(diff > 1, 1, 0),
          diff1 = ifelse(is.na(diff1), 0, diff1),
-         group = cumsum(diff1)) %>%
+         group = cumsum(diff1),
+         id2 = paste0(ID, date_local, group),
+         id3 = paste(date_local, group)) %>%
   select(-c(diff, diff1, lag2)) %>%
   ungroup()
 
