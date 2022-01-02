@@ -24,7 +24,8 @@ rcomm <- data.frame(rcomm0) %>% dplyr::filter(PM < 250) %>%
          time_local = hour(rounddate),
          # assumes hourly monitors capture preceding hour
          #time_local = time_local + 1,
-         time_local = ifelse(time_local == 24, 0, time_local)) %>%
+         time_local = ifelse(time_local == 24, 0, time_local),
+         month = month(rdatetime)) %>%
   left_join(., va24) %>%
   left_join(., vah) %>%
   left_join(., weather) %>%
