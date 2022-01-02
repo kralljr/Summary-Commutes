@@ -162,7 +162,8 @@ load(here("data/gestdc-dates.RData"))
 # all dates available
 join1 <- left_join(dates, vah0)
 
-vah0 <- rename(vah0, obshour = hourly)
+vah0 <- rename(vah0, obshour = hourly) %>%
+  select(date_local, time_local, diff)
 
 
 
