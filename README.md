@@ -49,3 +49,4 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
     - Output: rcomm.RData
     
 X. check-roadiness-cells.R: Checking file with maps to verify NA cells
+X. roadiness-lm.Rmd: Preliminary LMM for commute data
