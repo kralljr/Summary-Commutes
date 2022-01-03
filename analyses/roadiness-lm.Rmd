@@ -34,7 +34,7 @@ load(here("data/rcomm.RData"))
 rcomm <- filter(rcomm, PM < 25)
 rcomm <- mutate(rcomm, aPM = PM - daily, aPM2 = PM + hourly, aPMall = aPM + hourly)
 
-rcomm1 <- select(rcomm, ID, rdatetime, rness, PM, aPM : aPMall) %>%
+rcomm1 <- dplyr::select(rcomm, ID, rdatetime, rness, PM, aPM : aPMall) %>%
   pivot_longer(PM : aPMall)
 
 ```
@@ -125,8 +125,12 @@ rcomm <- group_by(rcomm, ID, date_local, group) %>%
   # start time for each
   mutate(stime = min(rdatetime),
          timemin = as.numeric((rdatetime - stime)/60)) %>%
-  filter(!is.na(srness))
+  filter(!is.na(srness))%>%
+  ungroup()
+```
 
+
+```{r}
 # all commutes nested within person only
 cs1 <- corAR1(form = ~timemin |ID/id3)
 # cs1 <- corARMA(form = ~timemin |ID/id3, p = 1, q = 2)
@@ -204,4 +208,96 @@ ggplot(lmeall, aes(x = term, y = estimate, colour = type)) +
 ggplot(rcomm, aes(y = PM, x = rness, colour = ID)) + geom_point()
 ggplot(rcomm, aes(y = log(PM + 0.2), x = ID, colour = ID)) + geom_violin() +
   theme(legend.position = "none")
+```
+
+#  Effect plots
+
+```{r}
+rcommU <- dplyr::select(rcomm, srness, rtype, PM, daily, obsdiff, ID,date_local,group, awnd , prcp , tmax, snow, tmin) %>% na.omit()
+
+iqrs <- dplyr::select(rcommU, -c(PM, ID, date_local, group,  
+                                prcp, snow, rtype)) %>%
+  pivot_longer(srness : tmin) %>%
+  group_by(name)
+
+iqrs <- iqrs %>%
+  summarize(IQR = IQR(value)) %>%
+  mutate(IQR = ifelse(name %in% c("snow", "prcp"), 1, IQR)) %>%
+  rename(term = name)
+
+cs1 <- corAR1(form = ~1|ID/date_local/group)
+# cs1 <- corARMA(form = ~ 1|ID/group, p = 5, q = 5)
+cs1 <- Initialize(cs1, data = rcommU)
+
+lme1d <- lme(PM ~ srness + daily + obsdiff + awnd + prcp + tmax + snow + tmin + rtype, random=~1|ID/date_local/group, data=rcommU, correlation= cs1)
+```
+
+
+
+```{r}
+lme1d$sigma
+lme1d$apVar # what is this
+lme1d$modelStruct
+
+tre
+sqrt(2.1)
+
+# Random effects:
+#  Formula: ~1 | ID
+#         (Intercept)
+# StdDev:    2.105865
+# 
+#  Formula: ~1 | date_local %in% ID
+#         (Intercept)
+# StdDev:   0.9158798
+# 
+#  Formula: ~1 | group %in% date_local %in% ID
+#         (Intercept) Residual
+# StdDev:    2.738501 1.791558
+
+```         
+         
+```{r}
+t1 <- tidy(lme1d, conf.int = T) %>%
+  filter(effect == "fixed", term != "(Intercept)") %>%
+  full_join(iqrs) %>%
+  mutate(IQR = ifelse(is.na(IQR), 1, IQR),
+         estimateIQR = estimate * IQR, conf.lowIQR = conf.low * IQR,
+         conf.highIQR = conf.high * IQR,
+         term1 = factor(term, levels = c("daily", "obsdiff", "srness", 
+                            "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", 
+                          "tmax" ,"tmin",  "prcp", "snow" , "awnd"),
+         labels = c("Daily PM2.5", "Hourly PM2.5", "Roadiness", 
+                    "Local conn", "Local", "Other",
+                    "Max Temp",  "Min Temp", "Precipitation","Snow", "Wind")),
+         type = ifelse(term %in% c("daily", "obsdiff", "srness",   "rtypeLocalConn",  "rtypeLocal",    "rtypeOther"), "Pollution", "Meteorology"),
+         type2 = ifelse(term %in% c("prcp", "snow",  "rtypeLocalConn",  "rtypeLocal",    "rtypeOther"), "cat", "num")) 
+```
+
+
+```{r}
+
+g1 <- ggplot(filter(t1, type2 == "cat"), aes(y = term1, x = estimate)) +
+  geom_pointrange(aes(xmin = conf.low, xmax = conf.high)) +
+  geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
+  xlab("") +
+  ylab(expression(paste("Change in PM"[2.5], " (", mu, "g/m"^3, ")" , " per IQR increase"))) +
+  theme_bw() +
+  theme(text = element_text(size = 24)) #+ facet_wrap(~type, scales = "free", ncol = 1)
+
+g1
+```
+
+
+```{r}
+
+g2 <- ggplot(filter(t1, type2 != "cat"), aes(y = term1, x = estimateIQR)) +
+  geom_pointrange(aes(xmin = conf.lowIQR, xmax = conf.highIQR)) +
+  geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
+  xlab("") +
+  ylab(expression(paste("Change in PM"[2.5], " (", mu, "g/m"^3, ")" , " per IQR increase"))) +
+  theme_bw() +
+  theme(text = element_text(size = 24)) + facet_wrap(~type, scales = "free", ncol = 1)
+
+g2
 ```
