@@ -122,7 +122,9 @@ rcomm2 <- mutate(rcomm,
 
 # mode of road type
 rcomm2 <- group_by(rcomm2, ID, date_local, group) %>%
-  mutate(rtypeMode = Mode(rtype)) %>% ungroup()
+  mutate(rtypeMode = Mode(rtype), stime = min(rdatetime),
+                  timemin = as.numeric((rdatetime - stime)/60) ) %>% ungroup() %>%
+  select(-stime)
 
 
 
