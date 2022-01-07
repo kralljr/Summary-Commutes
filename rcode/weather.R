@@ -153,7 +153,10 @@ weather <- select(weather, -sflag) %>%
          #diff = as.numeric(date - dateL1),
          tmaxL1 = dplyr::lag(tmax), tminL1 = dplyr::lag(tmin),
          awndL1 = dplyr::lag(awnd), prcpL1 = dplyr::lag(prcp),
-         snowL1 = dplyr::lag(snow)) %>%
+         snowL1 = dplyr::lag(snow),
+         tmaxL1m = dplyr::lead(tmax), tminL1m = dplyr::lead(tmin),
+         awndL1m = dplyr::lead(awnd), prcpL1m = dplyr::lead(prcp),
+         snowL1m = dplyr::lead(snow)) %>%
   rename(smoke = wt08, date_local = date) %>%
   select(-c(wt03, wt04, wt05, wt01, wt09, wt11, wt06, wt02,
             # remove fastest wind speed?
