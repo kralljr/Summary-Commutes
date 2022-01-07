@@ -18,6 +18,7 @@ library(lme4)
 library(broom.mixed)
 library(ggthemes)
 library(nlme)
+# library(lmeInfo)
 
 ```
 
@@ -114,21 +115,11 @@ ggplot(lmerall, aes(y = model, x = estimate, colour = model)) +
 
 
 
-```{r}
-# AR1? corARMA?
-#rcomm0 <- rcomm
-rcomm <- mutate(rcomm, lPM = log(PM),
-                mrness = mean(rness), sdrness = sd(rness),
-                srness = (rness - mrness) / sdrness) 
 
-rcomm <- group_by(rcomm, ID, date_local, group) %>%
-  # start time for each
-  mutate(stime = min(rdatetime),
-         timemin = as.numeric((rdatetime - stime)/60)) %>%
-  filter(!is.na(srness))%>%
-  ungroup()
-```
 
+LME components
+
+- sigma: the estimated within-group error standard deviation (correlation strucnture)
 
 ```{r}
 # all commutes nested within person only
@@ -136,7 +127,7 @@ cs1 <- corAR1(form = ~timemin |ID/id3)
 # cs1 <- corARMA(form = ~timemin |ID/id3, p = 1, q = 2)
 cs1 <- Initialize(cs1, data = rcomm)
 
-lme1b <- lme(PM ~ srness , random=~timemin|ID/id3, data=rcomm, correlation= cs1)
+lme1b <- lme(PM ~ srness +timemin, random=~1|ID/id3, data=rcomm, correlation= cs1)
 
 # explore autocor of residuals
 ACF(lme1b, resType = "normalized") %>% plot()
@@ -202,6 +193,8 @@ ggplot(lmeall, aes(x = term, y = estimate, colour = type)) +
   theme(axis.text.x= element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
+
+
 # check distribution of PM
 
 ```{r}
@@ -213,10 +206,10 @@ ggplot(rcomm, aes(y = log(PM + 0.2), x = ID, colour = ID)) + geom_violin() +
 #  Effect plots
 
 ```{r}
-rcommU <- dplyr::select(rcomm, srness, rtype, PM, daily, obsdiff, ID,date_local,group, awnd , prcp , tmax, snow, tmin) %>% na.omit()
+rcommU <- dplyr::select(rcomm, srness, rtype, id2, PM, daily, obsdiff, ID,date_local,group, awnd , prcp , tmax, snow, tmin, cat5sm, timemin) %>% na.omit()
 
 iqrs <- dplyr::select(rcommU, -c(PM, ID, date_local, group,  
-                                prcp, snow, rtype)) %>%
+                                prcp, snow, rtype, id2, cat5sm)) %>%
   pivot_longer(srness : tmin) %>%
   group_by(name)
 
@@ -229,18 +222,39 @@ cs1 <- corAR1(form = ~1|ID/date_local/group)
 # cs1 <- corARMA(form = ~ 1|ID/group, p = 5, q = 5)
 cs1 <- Initialize(cs1, data = rcommU)
 
-lme1d <- lme(PM ~ srness + daily + obsdiff + awnd + prcp + tmax + snow + tmin + rtype, random=~1|ID/date_local/group, data=rcommU, correlation= cs1)
+lme1d <- lme(PM ~ srness + daily + obsdiff + awnd + prcp + tmax + snow + tmin + rtype + timemin + cat5sm, random=~timemin|ID/date_local/group, data=rcommU, correlation= cs1)
+
+ACF(lme1d, resType = "normalized", maxLag = 10) %>% plot()
+
+resid <- resid(lme1d, type = "normalized")
+
+```
+
+```{r}
+rcommU1 <- group_by(rcommU, id2) %>% mutate(mean = mean(PM), dPM = PM - mean)
+ggplot(rcommU1, aes(x = timemin, y = dPM, group = id2)) + geom_smooth()
+
 ```
 
 
+## Variance components
+
+```{r, echo = T}
+VarCorr(lme1d)
+```
 
 ```{r}
 lme1d$sigma
-lme1d$apVar # what is this
+lme1d$apVar # vcov of variance comp
 lme1d$modelStruct
 
-tre
+intervals (lme1d)
+
 sqrt(2.1)
+
+lme1d$coef$random$ID %>% sd()
+lme1d$coef$random$date_local %>% sd()
+lme1d$coef$random$group %>% sd()
 
 # Random effects:
 #  Formula: ~1 | ID
@@ -264,14 +278,14 @@ t1 <- tidy(lme1d, conf.int = T) %>%
   mutate(IQR = ifelse(is.na(IQR), 1, IQR),
          estimateIQR = estimate * IQR, conf.lowIQR = conf.low * IQR,
          conf.highIQR = conf.high * IQR,
-         term1 = factor(term, levels = c("daily", "obsdiff", "srness", 
+         term1 = factor(term, levels = c("daily", "obsdiff", "srness", "timemin",
                             "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", 
-                          "tmax" ,"tmin",  "prcp", "snow" , "awnd"),
-         labels = c("Daily PM2.5", "Hourly PM2.5", "Roadiness", 
+                          "tmax" ,"tmin",  "prcp", "snow" , "awnd", "cat5smNW", "cat5smOther"),
+         labels = c("Daily PM2.5", "Hourly PM2.5", "Roadiness", "Time since start",
                     "Local conn", "Local", "Other",
-                    "Max Temp",  "Min Temp", "Precipitation","Snow", "Wind")),
-         type = ifelse(term %in% c("daily", "obsdiff", "srness",   "rtypeLocalConn",  "rtypeLocal",    "rtypeOther"), "Pollution", "Meteorology"),
-         type2 = ifelse(term %in% c("prcp", "snow",  "rtypeLocalConn",  "rtypeLocal",    "rtypeOther"), "cat", "num")) 
+                    "Max Temp",  "Min Temp", "Precipitation","Snow", "Wind", "WindDir NW", "WindDir Other")),
+         type = ifelse(term %in% c("daily", "obsdiff", "srness",   "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "timemin"), "Pollution", "Meteorology"),
+         type2 = ifelse(term %in% c("prcp", "snow",  "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "cat5smNW", "cat5smOther"), "cat", "num")) 
 ```
 
 
