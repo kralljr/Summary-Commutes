@@ -27,12 +27,12 @@ library(here)
 # get VA data
 # source(here("rcode/clean-va.R"))
 
-# get weather data
+# get weather data (not all necessary)
 # source(here("rcode/weather.R"))
 
 # add in PM data to final dataset
 # source(here("rcode/adjust-pm.R"))
 
-# fix wind
-# source(here("rcode/wind-dir.R"))
+# fix varialbes based on EDA
+# source(here("rcode/fix-data.R"))
 
