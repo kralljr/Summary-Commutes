@@ -48,10 +48,10 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
     - Input: roadiness_commutes.Rdata, vah.RData (hourly averages VA PM, hourly+season, observed), va24.RData (daily PM), weather-cleaned.RData (weather data)
     - Output: rcomm.RData
     
-11. wind-dir.R: File to fix wind direction
+11. fix-data.R: File to fix variables based on EDA
 
     - Input: rcomm.RData
-    - Output: rcomm.RData
+    - Output: rcomm2.RData
     
 X. check-roadiness-cells.R: Checking file with maps to verify NA cells
 X. roadiness-lm.Rmd: Preliminary LMM for commute data
