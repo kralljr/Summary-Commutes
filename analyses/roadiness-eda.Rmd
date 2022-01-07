@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F, warning = F, message = F)
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = T)
 ```
 
 ```{r}
@@ -15,7 +15,10 @@ library(tidyverse)
 library(knitr)
 library(here)
 library(ggthemes)
+library(DescTools)
 library(RColorBrewer)
+library(forcats)
+library(lubridate)
 
 
 source(here("rcode/windrose.R"))
@@ -25,17 +28,91 @@ source(here("rcode/windrose.R"))
 
 ```{r}
 # load data
-load(here("data/rcomm.RData"))
-rcomm <- mutate(rcomm, lPM = log(PM + 0.01))
+load(here("data/rcomm2.RData"))
+rcomm <- rcomm2 
 ```
+
+# Data summary
+
+Our data contains 2323 observations for 25 commuters and 71 commutes.  We observed 1 commute for 10 commuters (40%).  We observed 2-4 commutes for 9 commuters (36%) and 5-6 commutes for 6 commuters (24%).  The number of minutes of total commuting time observed per commuter ranged from 24 to 267 with a median of 54 minutes.  
+
+
+- 38 days of data
+- 45 person-days
+
+```{r, echo = T}
+# total observations
+nrow(rcomm)
+
+# total commuters
+unique(rcomm$ID) %>% length()
+
+# total commutes
+select(rcomm, ID, date_local, group) %>% unique() %>% nrow()
+
+# person-days
+select(rcomm, ID, date_local) %>% unique() %>% nrow()
+
+# days
+select(rcomm, date_local) %>% unique() %>% nrow()
+
+# total minutes of obs per commuter
+g1 <- group_by(rcomm, ID) %>% summarize(n=n()) %>% ungroup() %>% arrange(n)
+g1 %>%
+  kable()
+
+
+# summary of total minutes of obs per commuter
+summarize(g1, min(n), max(n), median(n), mean(n))
+
+# commutes per commuter
+select(rcomm, ID, date_local, group) %>% unique() %>% group_by(ID) %>% count() %>%
+  ungroup() %>% rename(commutesobs= n) %>% count(commutesobs) %>% 
+  mutate(perc = round(100 * n/sum(n), 1)) %>% kable()
+```
+
+
+The average commute length observed was approximately 30 minutes with commutes ranging from 1 to 99 minutes.
+
+```{r}
+# # length of time per commute
+group_by(rcomm, ID, date_local, group) %>% count() %>% ungroup() %>%
+  summarize(min = min(n), max = max(n))
+
+# length of time per commute by ID
+g1 <- group_by(rcomm, ID, date_local, group) %>% summarize(n = n()) %>%
+  ungroup() %>% group_by(ID) %>% summarize(mean = mean(n), min = min(n), max = max(n), median = median(n)) %>% ungroup()
+
+g1 %>%
+  kable()
+
+# average length of time per commute
+g1 %>% summarize(mean(median), median(mean), mean(mean), median(median))
+```
+
 
 
 # PM
 
-## Zeroes
+## Number of zeroes
 
 ```{r}
 filter(rcomm, PM == 0) %>% count(ID) %>% filter(n > 0)
+```
+
+## Histogram of PM
+
+```{r}
+ggplot(rcomm, aes(x = PM)) + geom_histogram()
+
+```
+
+## Histogram of PM by ID
+
+```{r, fig.height = 20}
+ggplot(rcomm, aes(x = PM)) + geom_histogram(bins = 15) + 
+  facet_wrap(~ID, scales ="free", ncol = 3)
+
 ```
 
 ## Histogram of log(PM + 0.01) by ID
@@ -49,11 +126,31 @@ ggplot(rcomm, aes(x = lPM)) + geom_histogram(bins = 15) +
 
 ## Summarize
 
+
+### By ID 
+
 ```{r}
 
-group_by(rcomm, ID) %>% summarize(mean = mean(lPM), 
-      sd = sd(lPM), min = min(lPM), max = max(lPM)) %>%
+sum1 <- group_by(rcomm, ID) %>% summarize(lmean = mean(lPM), 
+      lsd = sd(lPM), lmin = min(lPM), lmax = max(lPM),
+      mean = mean(PM), 
+      sd = sd(PM), min = min(PM), max = max(PM)) %>%ungroup()
+
+sum1%>%
   kable(digits = 2)
+```
+
+### Across IDs
+
+The average minute PM2.5 across participants was 5.6 mug/m3 ranging from 0 to 24.6 mug/m3.  In general, there was greater variability between participants than within a participant over the commutes, though variability was great for some participants.
+
+```{r}
+select(sum1, ID, lmean, mean,sd) %>% pivot_longer(-ID) %>%
+  group_by(name) %>% summarize(med = median(value), mean = mean(value), sd = sd(value)) %>%
+  kable(digits =2)
+
+
+select(sum1, ID, min, max) %>%  summarize(min = min(min), max = max(max))
 ```
 
 ## Violin plots
@@ -100,12 +197,23 @@ ggplot(sumdat, aes(x = sdPM, y = ID, colour = ID)) +
 
 # Roadiness/Road type
 
+
+2. Possible misclassification 
+
+Most observations (N=1212, 52.7%) were for local roads.  590 observations (25.6%) were on highways and 403 (17.5%) were on local connecting roads which are XX.  The remainder (N=96, 4.2%) were on ramps, tunnels, or others.
+
 ```{r}
+count(rcomm, rtype) %>%
+  mutate(perc = n / sum(n) * 100, perc = round(perc, 1)) 
+
+
 perc <- group_by(rcomm, ID) %>%
   count(rtype) %>%
   mutate(perc = n / sum(n) * 100, perc = round(perc, 1)) %>%
   select(-n) %>%
-  arrange(rtype, desc(perc))
+  arrange(rtype, desc(perc)) 
+
+perc %>% kable()
 
 ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) + 
   geom_tile() +
@@ -113,18 +221,39 @@ ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) +
 ```
 
 
-```{r, fig.height = 20, eval = F}
-perc <- group_by(rcomm, id2) %>%
-  count(rtype) %>%
-  mutate(perc = n / sum(n) * 100, perc = round(perc, 1)) %>%
-  select(-n) %>%
-  arrange(id2)
-
-ggplot(perc, aes(x= rtype, y = fct_inorder(id2), fill= perc)) + 
-  geom_tile() +
-  scale_fill_gradient(low = "white", high = "red")
+```{r}
+ggplot(rcomm, aes(x = timemin, y = fct_reorder(id2, timemin), fill = rtype)) +
+  geom_tile() + ylab("") +
+  theme(axis.text.y = element_blank())
 ```
 
+Not much difference if take mode over commute type
+
+```{r}
+
+select(rcomm, ID, date_local, group, rtypeMode) %>% unique() %>%
+  count(rtypeMode) %>% mutate(perc = 100 * n/sum(n), perc = round(perc, 1)) %>%
+  kable()
+```
+
+## Roadiness
+
+Reporting values is not so useful (standardized)
+```{r}
+
+s1 <- summarize(rcomm, mean = mean(srness), sd = sd(srness), min = min(srness), max= max(srness))
+
+s1 %>%
+  kable(digits = 2)
+ggplot(rcomm, aes(x = srness)) + geom_histogram(bins = 20)
+
+
+
+# by ID
+g1 <- group_by(rcomm, ID) %>% summarize(mean = mean(srness), sd = sd(srness), min = min(srness), max = max(srness))  %>% ungroup()
+g1 %>% kable(digits = 2)
+
+```
 
 # Weather
 
@@ -136,19 +265,30 @@ L1 variables: I created as 1 day lag
 
 - PRCP = Precipitation (tenths of mm)
 - SNOW = Snowfall (mm)
-- TMAX = Maximum temperature (tenths of degrees C)
-- TMIN = Minimum temperature (tenths of degrees C)
-- AWND = Average daily wind speed (tenths of meters per second)
+- TMAX = Maximum temperature (degrees C, original tenths of degrees C)
+- TMIN = Minimum temperature (degrees C, original tenths of degrees C)
+- AWND = Average daily wind speed (m/s, original tenths of meters per second)
 - wdf2, wdf5 direction of fastest wind (2 vs. 5 minutes) (degrees)
+- cat2, cat5 categorical direction of fastest wind (2 vs. 5 minutes)
 
 
 
 ## EDA
+
+
+
+
 ```{r}
-weather <- dplyr::select(rcomm, ID, awnd : snowL1) %>%
-  dplyr::select(-contains("L1")) %>%
-  pivot_longer(-ID) %>%
-  filter(!(name %in% c("fog", "icehailgl", "smoke", "windsnow", "wdf2", "wdf5")))
+
+weather1 <- dplyr::select(rcomm, date_local, ID, awnd : snowL1m, snowbin: prcpbinL1m) %>%
+  unique() %>%
+  dplyr::select( -contains("wdf")) 
+
+weather <- weather1 %>%
+  pivot_longer(-c("ID", "date_local")) %>%
+  filter(!(name %in% c("fog", "icehailgl", "smoke", "windsnow", "wdf2", "wdf5",
+                       "snowbin", "snowbinL1", "snowbinL1m",
+                       "prcpbin", "prcpbinL1", "prcpbinL1m")  ))
   
 group_by(weather, name) %>% summarize(mean = mean(value), sd = sd(value), 
                 min= min(value), max = max(value)) %>%
@@ -159,101 +299,106 @@ ggplot(weather, aes(x = value)) +geom_histogram(bins = 10) +
 ```
 
 
+*Snow and precipation: binary*
+
 ```{r}
+select(weather1, date_local, ID, contains("snowbin"), contains("prcpbin"), -windsnow) %>%
+  pivot_longer(-c("ID", "date_local")) %>%
+  group_by(name) %>%
+  count(value) %>% mutate(perc = round(100* n/sum(n), 1)) %>% kable()
+```
 
-# https://www7.ncdc.noaa.gov/climvis/help_wind.html
 
-datdir <- mutate(rcomm, cat2 = case_when((wdf2 <= 11 | wdf2 >=349) ~ "N",
-                                         (wdf2 >= 12 & wdf2 <= 33) ~ "NNE",
-                 (wdf2 >= 34 & wdf2 <= 56) ~ "NE", 
-# N = North (349 - 011 degrees)
-# NNE = North-Northeast (012-033 degrees)
-# NE = Northeast (034-056 degrees)
+### By observation 
 
-                  (wdf2  >= 57 & wdf2 <= 78) ~ "ENE",
-                   (wdf2 >= 79 & wdf2  <= 101) ~ "E",
-                    (wdf2 >= 102 & wdf2 <= 123) ~ "ESE",
-                    (wdf2 >= 124 & wdf2 <= 146) ~ "SE",
-                  (wdf2 >= 147 & wdf2 <= 168) ~ "SSE",
-                  (wdf2 >= 169 & wdf2 <= 191) ~ "S",
-# ENE = East-Northeast (057-078 degrees)
-# E = East (079-101 degrees)
-# ESE = East-Southeast (102-123 degrees)
-# SE = Southeast (124-146 degrees)
-# SSE = South-Southeast (147-168 degrees)
-# S = South (169-191 degrees)
+```{r}
+weather1b <- dplyr::select(rcomm, date_local, ID, group, awnd : snowL1m,snowbin: prcpbinL1m) %>%
+  unique() %>%
+  dplyr::select(-contains("wdf"))
 
-(wdf2 >= 192 & wdf2 <= 213) ~ "SSW",
-(wdf2 >= 214 & wdf2 <= 236) ~ "SW",
-(wdf2 >= 237 & wdf2 <= 258) ~ "WSW",
-(wdf2 >= 259 & wdf2 <= 281) ~ "W",
-(wdf2 >= 282 & wdf2 <= 303) ~ "WNW",
-# SSW = South-Southwest (192-213 degrees)
-# SW = Southwest (214-236 degrees)
-# WSW = West-Southwest (237-258 degrees)
-# W = West (259-281 degrees)
-# WNW = West-Northwest (282-303 degrees)
-(wdf2 >= 304 & wdf2 <= 326) ~ "NW",
-(wdf2 >= 327 & wdf2 <= 348) ~ "NNW"),
-# NW = Northwest (304-326 degrees)
-# NNW = North-Northwest (327-348 degrees)
-# VAR = Variable wind direction
-# CLM = Calm winds (speed = 0 knots)
-cat5 = case_when((wdf5 <= 11 | wdf5 >=349) ~ "N",
-                                         (wdf5 >= 12 & wdf5 <= 33) ~ "NNE",
-                 (wdf5 >= 34 & wdf5 <= 56) ~ "NE", 
-# N = North (349 - 011 degrees)
-# NNE = North-Northeast (012-033 degrees)
-# NE = Northeast (034-056 degrees)
+weatherb <- weather1b %>%
+  pivot_longer(-c("ID", "date_local")) %>%
+  filter(!(name %in% c("fog", "icehailgl", "smoke", "windsnow", "wdf2", "wdf5",
+                        "snowbin", "snowbinL1", "snowbinL1m",
+                       "prcpbin", "prcpbinL1", "prcpbinL1m")))
+  
+group_by(weatherb, name) %>% summarize(mean = mean(value), sd = sd(value), 
+                min= min(value), max = max(value)) %>%
+  kable(digits = 2)
 
-                  (wdf5  >= 57 & wdf5 <= 78) ~ "ENE",
-                   (wdf5 >= 79 & wdf5  <= 101) ~ "E",
-                    (wdf5 >= 102 & wdf5 <= 123) ~ "ESE",
-                    (wdf5 >= 124 & wdf5 <= 146) ~ "SE",
-                  (wdf5 >= 147 & wdf5 <= 168) ~ "SSE",
-                  (wdf5 >= 169 & wdf5 <= 191) ~ "S",
-# ENE = East-Northeast (057-078 degrees)
-# E = East (079-101 degrees)
-# ESE = East-Southeast (102-123 degrees)
-# SE = Southeast (124-146 degrees)
-# SSE = South-Southeast (147-168 degrees)
-# S = South (169-191 degrees)
+ggplot(weatherb, aes(x = value)) +geom_histogram(bins = 10) + 
+  facet_wrap(~name, scales = "free")
+```
 
-(wdf5 >= 192 & wdf5 <= 213) ~ "SSW",
-(wdf5 >= 214 & wdf5 <= 236) ~ "SW",
-(wdf5 >= 237 & wdf5 <= 258) ~ "WSW",
-(wdf5 >= 259 & wdf5 <= 281) ~ "W",
-(wdf5 >= 282 & wdf5 <= 303) ~ "WNW",
-# SSW = South-Southwest (192-213 degrees)
-# SW = Southwest (214-236 degrees)
-# WSW = West-Southwest (237-258 degrees)
-# W = West (259-281 degrees)
-# WNW = West-Northwest (282-303 degrees)
-(wdf5 >= 304 & wdf5 <= 326) ~ "NW",
-(wdf5 >= 327 & wdf5 <= 348) ~ "NNW"))
 
-count(datdir, cat2) %>% arrange(desc(n))
-# NW + NNW + W
-# S + SE + ESE
-# NNE
+*Snow and precipation: binary*
+
+```{r}
+select(weather1b, date_local, ID, group, contains("snowbin"), contains("prcpbin"), -windsnow) %>%
+  pivot_longer(-c("ID", "group", "date_local")) %>%
+  group_by(name) %>%
+  count(value) %>% mutate(perc = round(100* n/sum(n), 1)) %>% kable()
 
 ```
 
 
+### Wind direction
+
 ```{r}
-wind <- select(rcomm, wdf2, wdf5) %>% na.omit()
+winddir <- select(rcomm, ID, date_local, cat2sm, cat5sm, wdf2, wdf5) %>% unique()
+ggplot(winddir, aes(x = cat5sm)) + geom_bar()
+ggplot(winddir, aes(x = cat2sm)) + geom_bar()
 
-# find cutoffs
-km1 <- kmeans(wind$wdf2, 4)
-km1$centers
+```
 
-km1 <- kmeans(wind$wdf5, 4)
-km1$centers
+- Wind dir: 5
+```{r}
+count(winddir, cat5sm) %>% mutate(perc = round(100 * n / sum(n), 1)) %>% kable()
 
+```
 
-cut(rcomm$wdf5, breaks = 4) %>% levels()
-
-breaks <- c(110, 190, 275)
-
+```{r}
+datdir <- rename(winddir, dir = wdf5)
 plot.windrose(datdir)
 ```
+
+
+- Wind dir: 2
+```{r}
+count(winddir, cat2sm) %>% mutate(perc = round(100 * n / sum(n), 1)) %>% kable()
+
+```
+
+```{r}
+datdir <- rename(winddir, dir = wdf2)
+plot.windrose(datdir)
+```
+
+# compare commutes
+
+```{r, fig.height = 30}
+rcomm1 <- mutate(rcomm, dt1 = lubridate::date(rdatetime), 
+                dt2 =  lubridate::as_datetime(dt1),
+                dt2= lubridate::force_tz(dt2, "America/New_York"),
+                diff1 = rdatetime - dt2, diff1 = diff1 / 60 / 60) %>%
+  group_by(ID) %>%
+  mutate(mindate = min(dt1), maxdate = max(dt1), 
+         day = ifelse(dt1 == mindate, "day1", 
+                      ifelse(dt1 == maxdate, "maxd", "mid")))
+ggplot(rcomm1, aes(x = diff1, y = date_local, fill = rtype)) +
+  geom_tile() +
+  facet_wrap(~ID, ncol = 1, scales = "free_y")
+```
+
+Possible multiple obs of same commute:
+
+- GMU 1045
+- GMU 1040
+- GMU 1037
+- GMU 1036
+- GMU 1035
+- GMU 1032
+- GMU 1018
+- GMU 1016
+- GMU 1007
+- GMU 1001
