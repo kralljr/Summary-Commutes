@@ -56,8 +56,6 @@ plot.windrose <- function(data,
       ylim(c(0,countmax))
   }
 
-  # print the plot
-  print(p.windrose)
 
   # return the handle to the wind rose
   return(p.windrose)
