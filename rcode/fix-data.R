@@ -127,5 +127,4 @@ rcomm2 <- group_by(rcomm2, ID, date_local, group) %>%
   select(-stime)
 
 
-
 save(rcomm2, file = here("data/rcomm2.RData"))

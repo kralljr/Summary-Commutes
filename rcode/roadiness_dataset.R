@@ -59,7 +59,9 @@ pm <- dplyr::select(datall, rdatetime, rtiPM25, ID) %>%
 
 # check code below-- should be the same
 pm1 <- mutate(pm, date = date(rdatetime)) %>%
+  filter(!is.na(PM), PM < 250) %>%
   group_by(ID, date) %>%
+  arrange(ID, date, rdatetime) %>%
   mutate(lag1 = lag(rdatetime),
          diff = as.numeric(rdatetime - lag1),
          diff = ifelse(is.na(lag1), 0, diff - 1),
@@ -82,7 +84,9 @@ rcomm <- inner_join(pm, cdat)
 
 # add information on unique commutes
 rcomm <- mutate(rcomm, date = date(rdatetime)) %>%
+  filter(!is.na(PM), PM < 250) %>%
   group_by(ID, date) %>%
+  arrange(ID, date, rdatetime) %>%
   mutate(lag1 = lag(rdatetime),
          diff = as.numeric(rdatetime - lag1),
          diff = ifelse(is.na(lag1), 0, diff - 1),
