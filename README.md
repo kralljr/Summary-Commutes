@@ -31,7 +31,7 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
 7. roadiness_dataset.R: Merge with full GEST-DC commute dataset
 
     - Input: points_gricell.Rdata, pm-cont-data-1minrti.RData (RTI adjusted PM), rtypes.RData
-    - Creates: roadiness_commutes.Rdata (rtype is mode, rtype2 is mean)
+    - Creates: roadiness_commutes.Rdata (rtype is mode, rtype2 is mean), pm-cleaned.RData (pm data without GPS)
     
 8. clean-va.R: File to get PM for daily VA, hourly avg
 
@@ -55,3 +55,12 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
     
 X. check-roadiness-cells.R: Checking file with maps to verify NA cells
 X. roadiness-lm.Rmd: Preliminary LMM for commute data
+
+
+For full data without GPS (for sensitivity analysis):
+
+7b. fulldata-noGPS.R: File to get no GPS data
+
+    - Input:   pm-cleaned.RData, vah.RData (hourly averages VA PM, hourly+season, observed), va24.RData (daily PM), weather-cleaned.RData (weather data), load("/Users/jenna/Dropbox/GESTDC/data/commute-data.RData") (for commute start/stop)
+
+    - Output: pm-final.RData

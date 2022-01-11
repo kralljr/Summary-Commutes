@@ -57,6 +57,24 @@ pm <- dplyr::select(datall, rdatetime, rtiPM25, ID) %>%
   mutate(rdatetime = as_datetime(rdatetime, tz = "America/New_York")) %>%
   unique()
 
+# check code below-- should be the same
+pm1 <- mutate(pm, date = date(rdatetime)) %>%
+  group_by(ID, date) %>%
+  mutate(lag1 = lag(rdatetime),
+         diff = as.numeric(rdatetime - lag1),
+         diff = ifelse(is.na(lag1), 0, diff - 1),
+         cum1 = cumsum(diff)) %>%
+  ungroup() %>%
+  group_by(ID, date, cum1) %>%
+  mutate(obs = n()) %>%
+  dplyr::select(-c(diff, lag1)) %>%
+  mutate(id2 = paste(ID, date, cum1), row = row_number()) %>%
+  # commutes of at least 15 minutes
+  filter(obs >= 15, !is.na(PM)) %>%
+  ungroup()
+
+
+save(pm1, file =  here("data/pm-cleaned.RData"))
 
 
 rcomm <- inner_join(pm, cdat)
