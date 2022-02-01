@@ -493,7 +493,7 @@ summarize(va24, mean(daily), sd(daily), min(daily), max(daily))
 # Participant characteristics
 
 
-```{r}
+```{r, eval = F}
 part <- select(rcomm, ID) %>% unique() %>%
   mutate(id = tolower(ID))
 load("~/Documents/gestdc-data/gestdc-merged.RData")
