@@ -20,7 +20,8 @@ lab1 <- c("Sep", "Jan",  "May")
 cols <- c("#e69f00", "#56b4e9","#000000" )
 alps <- c(0.7, 0.8, 0.7)
 
-ggplot(obsdiff, aes(x = time_local, y = obsdiff, group = date_local, colour = cold,
+
+fighourly <- ggplot(obsdiff, aes(x = time_local, y = obsdiff, group = date_local, colour = cold,
                     alpha = cold)) +
   geom_line() +
   scale_color_manual(name = "Season", values = cols) +
@@ -31,5 +32,8 @@ ggplot(obsdiff, aes(x = time_local, y = obsdiff, group = date_local, colour = co
   xlab("Hour of day") +
   theme_bw() +
   theme(text = element_text(size = 24))
-
+fighourly
 ggsave(file.path(savedir, "figure2-hourly.png"))
+
+fighourly <- list(fighourly, obsdiff, alps, cols)
+save(fighourly, file = "~/Documents/git/Summary-Commutes/figures/fighourly.RData")
