@@ -15,7 +15,9 @@ load(here("data/weather-cleaned.RData"))
 rcomm0 <- rcomm
 # merge with daily average for all NOVA monitors
 #
-rcomm <- data.frame(rcomm0) %>% dplyr::filter(PM < 250) %>%
+rcomm <- data.frame(rcomm0) %>%
+  # already removed? in roadiness_dataset.R
+  # dplyr::filter(PM < 250) %>%
   mutate(date_local = date(rdatetime),
          # time_local not averaged
          #rounddate = round_date(rdatetime, unit = "hour"),
