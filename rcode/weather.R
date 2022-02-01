@@ -4,6 +4,7 @@ library(tidyverse)
 library(here)
 library(RColorBrewer)
 library(maps)
+library(forcats)
 
 # api for NOAA: nkey
 source(here("rcode/keys.R"))
@@ -136,6 +137,63 @@ getweather <- function(station) {
 # save(weather, file = here("data/weather-raw.RData"))
 
 load(here("data/weather-raw.RData"))
+
+# check variation in wind direction
+load(here("data/gestdc-dates.RData"))
+
+select(weather, -sflag) %>%
+  filter(type == "wdf5") %>%
+  group_by(date) %>%
+  summarize(sd = sd(value, na.rm = T), mean = mean(value, na.rm = T),
+            min = min(value, na.rm = T), max = max(value, na.rm = T)) %>%
+  ungroup() %>%
+  filter(sd > 0) %>%
+  select(-sd) %>%
+  pivot_longer(mean : max) %>%
+  mutate(value = case_when((value <= 11 | value >=349) ~ "N",
+                   (value >= 12 & value <= 33) ~ "NNE",
+                   (value >= 34 & value <= 56) ~ "NE",
+                   # N = North (349 - 011 degrees)
+                   # NNE = North-Northeast (012-033 degrees)
+                   # NE = Northeast (034-056 degrees)
+
+                   (value  >= 57 & value <= 78) ~ "ENE",
+                   (value >= 79 & value  <= 101) ~ "E",
+                   (value >= 102 & value <= 123) ~ "ESE",
+                   (value >= 124 & value <= 146) ~ "SE",
+                   (value >= 147 & value <= 168) ~ "SSE",
+                   (value >= 169 & value <= 191) ~ "S",
+                   # ENE = East-Northeast (057-078 degrees)
+                   # E = East (079-101 degrees)
+                   # ESE = East-Southeast (102-123 degrees)
+                   # SE = Southeast (124-146 degrees)
+                   # SSE = South-Southeast (147-168 degrees)
+                   # S = South (169-191 degrees)
+
+                   (value >= 192 & value <= 213) ~ "SSW",
+                   (value >= 214 & value <= 236) ~ "SW",
+                   (value >= 237 & value <= 258) ~ "WSW",
+                   (value >= 259 & value <= 281) ~ "W",
+                   (value >= 282 & value <= 303) ~ "WNW",
+                   # SSW = South-Southwest (192-213 degrees)
+                   # SW = Southwest (214-236 degrees)
+                   # WSW = West-Southwest (237-258 degrees)
+                   # W = West (259-281 degrees)
+                   # WNW = West-Northwest (282-303 degrees)
+                   (value >= 304 & value <= 326) ~ "NW",
+                   (value >= 327 & value <= 348) ~ "NNW"),
+         value = fct_collapse(value, NW = c("NW", "NNW", "W", "WNW", "N"),
+                               SE =c("S", "SE", "ESE", "SSE", "SSE", "E")),
+         # other: NNE, SSW, WSW
+         value = fct_other(value, keep = c("NW", "SE"))) %>%
+  filter(name != "mean") %>%
+  pivot_wider() %>% filter(min != max) %>%
+  rename(date_local = date) %>%
+  inner_join(dates, .) %>% nrow()
+
+# discrepancies
+# 19 / 79: 25% misclassification?
+
 
 weather <- select(weather, -sflag) %>%
   group_by(date, type) %>%
