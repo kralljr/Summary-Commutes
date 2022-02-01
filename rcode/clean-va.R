@@ -14,7 +14,10 @@ va <- filter(va_monitor_data, county_code %in% c("013", "059")) %>%
   select(AQS_site_ID, latitude, longitude, date_local, time_local, sample_measurement,
          sample_duration)
 
-
+# unique(va$AQS_site_ID)
+# 13 is arlington county, 59 is fairfax county
+# [1] "51-059-0030-1" (24) "51-013-0020-1" (24)"51-013-0020-2"(24) "51-059-0031-3" (hourly)
+# >
 
 
 
@@ -113,7 +116,7 @@ save(va24, file = here("data/va24.RData"))
 
 ############################################
 # Hourly concentrations (for hourly effects)
-# only one monitor (springfield)
+# only one monitor (springfield) "51-059-0031-3"
 vah0 <- filter(va, sample_duration != "24 HOUR") %>%
   select(date_local, time_local, sample_measurement) %>%
   rename(hourly = sample_measurement) %>%
