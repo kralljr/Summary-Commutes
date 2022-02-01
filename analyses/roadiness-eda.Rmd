@@ -494,8 +494,28 @@ summarize(va24, mean(daily), sd(daily), min(daily), max(daily))
 
 
 ```{r}
-part <- select(rcomm, ID) %>% unique()
+part <- select(rcomm, ID) %>% unique() %>%
+  mutate(id = tolower(ID))
+load("~/Documents/gestdc-data/gestdc-merged.RData")
 
+dat <- select(dat, id, age : numchildren)
+
+dat1 <- left_join(part, dat) %>%
+  mutate(numchildren = factor(numchildren))
+
+summarize(dat, mean(age, na.rm = T), sd(age,na.rm = T), min(age,na.rm = T), max(age,na.rm = T))
+
+summarize(dat1, mean(age), sd(age), min(age), max(age))
+
+select(dat1, id, marital, race, ethnicity, education, occupation, fulltime, numchildren) %>%
+  pivot_longer(-id) %>%
+  na.omit() %>%
+  group_by(name) %>%
+  count(value) %>%
+  mutate(perc= 100 *n/25, perc = round(perc, 1)) %>% View()
+
+# education
+(5 + 5 + 2 + 7) / 25
 
 ```
 
