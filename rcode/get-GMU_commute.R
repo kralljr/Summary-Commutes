@@ -11,3 +11,9 @@ source(here("functions/GMU_commute.R"))
   # Discarded single-line footer: <<73057 >>
 gpslatlon <- oGMU_commute("gps-only/")
 save(gpslatlon, file = here("data/gpslatlon.RData"))
+
+
+# check files: 36 with GPS files
+# 28 with non-missing latitude and longitude
+list.files("~/Documents/gestdc-data/Data-logger/gps-only/") %>%
+  substr(., 1, 4) %>% unique() %>% length()

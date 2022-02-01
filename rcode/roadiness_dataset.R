@@ -30,6 +30,17 @@ cdat0 <- filter(cdat0, !is.na(leng.distm2_scale))
 
 tripdata <- mutate(cdat0, tripid = paste0(ID, Trip)) %>%
   arrange(tripid, datetime)
+
+
+
+# check sample size
+# 36
+select(gpslatlon$dat, ID) %>% unique() %>% nrow()
+# 28: missing = 1
+select(cdat0, ID) %>% unique() %>% nrow()
+
+
+
 save(tripdata, file = here("data/tripdata.RData"))
 # 154 trips
 
@@ -81,9 +92,13 @@ pm1 <- mutate(pm, date = date(rdatetime)) %>%
 
 save(pm1, file =  here("data/pm-cleaned.RData"))
 
-
+#49
+# unique(pm$ID) %>% length()
+# 28
+# unique(cdat$ID) %>% length()
 rcomm <- inner_join(pm, cdat)
-
+# 27
+# unique(rcomm$ID) %>% length()
 
 # add information on unique commutes
 rcomm <- mutate(rcomm, date = date(rdatetime)) %>%
