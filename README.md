@@ -32,6 +32,7 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
 
     - Input: points_gricell.Rdata, pm-cont-data-1minrti.RData (RTI adjusted PM), rtypes.RData
     - Creates: roadiness_commutes.Rdata (rtype is mode, rtype2 is mean), pm-cleaned.RData (pm data without GPS)
+    - Use to see number of participants N=25
     
 8. clean-va.R: File to get PM for daily VA, hourly avg
 
