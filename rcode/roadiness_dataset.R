@@ -33,12 +33,15 @@ tripdata <- mutate(cdat0, tripid = paste0(ID, Trip)) %>%
 save(tripdata, file = here("data/tripdata.RData"))
 # 154 trips
 
+# TNMFRC contains 5 and 8s only for other
+
 lev1 <- c(seq(1, 5), 8)
 lab1 <- c("High/SecHigh", "High/SecHigh","LocalConn", "Local", "Other", "Other")
 
 cdat <- cdat0 %>% mutate(rdatetime = as_datetime(rdatetime, tz = "America/New_York")) %>%
   rename(rness = leng.distm2_scale) %>%
   # remove latitude and longitude
+  # TNMFRC contains 5 and 8s only for other
   dplyr::select(ID, rdatetime, rness, TNMFRC) %>%
   group_by(ID, rdatetime) %>%
   summarize(rness = mean(rness), rtype = Mode(TNMFRC),
