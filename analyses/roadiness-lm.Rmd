@@ -18,6 +18,7 @@ library(lme4)
 library(broom.mixed)
 library(ggthemes)
 library(nlme)
+library(forcats)
 # library(lmeInfo)
 
 ```
@@ -25,7 +26,9 @@ library(nlme)
 
 ```{r}
 # load data
-load(here("data/rcomm.RData"))
+load(here("data/rcomm2.RData"))
+rcomm <- rcomm2 
+
 ```
 
 # Explore
@@ -33,7 +36,8 @@ load(here("data/rcomm.RData"))
 
 ```{r adjust}
 rcomm <- filter(rcomm, PM < 25)
-rcomm <- mutate(rcomm, aPM = PM - daily, aPM2 = PM + hourly, aPMall = aPM + hourly)
+rcomm <- mutate(rcomm, aPM = PM - daily, aPM2 = PM + hourly, aPMall = aPM + hourly,
+                cat5sm = fct_relevel(cat5sm, "NW"))
 
 rcomm1 <- dplyr::select(rcomm, ID, rdatetime, rness, PM, aPM : aPMall) %>%
   pivot_longer(PM : aPMall)
@@ -110,9 +114,6 @@ ggplot(lmerall, aes(y = model, x = estimate, colour = model)) +
   theme_bw() +
   theme(legend.position = "none")
 ```
-
-
-
 
 
 
@@ -206,23 +207,25 @@ ggplot(rcomm, aes(y = log(PM + 0.2), x = ID, colour = ID)) + geom_violin() +
 #  Effect plots
 
 ```{r}
-rcommU <- dplyr::select(rcomm, srness, rtype, id2, PM, daily, obsdiff, ID,date_local,group, awnd , prcp , tmax, snow, tmin, cat5sm, timemin) %>% na.omit()
+rcommU <- dplyr::select(rcomm, srness, rtype, id2, PM, daily, 
+    obsdiff, ID,date_local, group, awnd , prcpbin , 
+    tmax, snowbin, tmin, cat5sm, timemin) %>% na.omit()
 
 iqrs <- dplyr::select(rcommU, -c(PM, ID, date_local, group,  
-                                prcp, snow, rtype, id2, cat5sm)) %>%
+                                prcpbin, snowbin, rtype, id2, cat5sm)) %>%
   pivot_longer(srness : tmin) %>%
   group_by(name)
 
 iqrs <- iqrs %>%
   summarize(IQR = IQR(value)) %>%
-  mutate(IQR = ifelse(name %in% c("snow", "prcp"), 1, IQR)) %>%
+  mutate(IQR = ifelse(name %in% c("snowbin", "prcpbin"), 1, IQR)) %>%
   rename(term = name)
 
-cs1 <- corAR1(form = ~1|ID/date_local/group)
+cs1 <- corAR1(form = ~1|ID/group)
 # cs1 <- corARMA(form = ~ 1|ID/group, p = 5, q = 5)
 cs1 <- Initialize(cs1, data = rcommU)
 
-lme1d <- lme(PM ~ srness + daily + obsdiff + awnd + prcp + tmax + snow + tmin + rtype + timemin + cat5sm, random=~timemin|ID/date_local/group, data=rcommU, correlation= cs1)
+lme1d <- lme(PM ~ srness + daily + obsdiff + awnd + prcpbin + tmax + snowbin + tmin + rtype + timemin + cat5sm, random=~timemin|ID/group, data=rcommU, correlation= cs1)
 
 ACF(lme1d, resType = "normalized", maxLag = 10) %>% plot()
 
@@ -280,12 +283,12 @@ t1 <- tidy(lme1d, conf.int = T) %>%
          conf.highIQR = conf.high * IQR,
          term1 = factor(term, levels = c("daily", "obsdiff", "srness", "timemin",
                             "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", 
-                          "tmax" ,"tmin",  "prcp", "snow" , "awnd", "cat5smNW", "cat5smOther"),
+                          "tmax" ,"tmin",  "prcpbin", "snowbin" , "awnd", "cat5smSE", "cat5smOther"),
          labels = c("Daily PM2.5", "Hourly PM2.5", "Roadiness", "Time since start",
                     "Local conn", "Local", "Other",
-                    "Max Temp",  "Min Temp", "Precipitation","Snow", "Wind", "WindDir NW", "WindDir Other")),
+                    "Max Temp",  "Min Temp", "Precipitation","Snow", "Wind", "WindDir SE", "WindDir Other")),
          type = ifelse(term %in% c("daily", "obsdiff", "srness",   "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "timemin"), "Pollution", "Meteorology"),
-         type2 = ifelse(term %in% c("prcp", "snow",  "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "cat5smNW", "cat5smOther"), "cat", "num")) 
+         type2 = ifelse(term %in% c("prcpbin", "snowbin",  "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "cat5smNW", "cat5smOther"), "cat", "num")) 
 ```
 
 

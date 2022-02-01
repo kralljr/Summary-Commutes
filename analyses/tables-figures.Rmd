@@ -1,0 +1,144 @@
+---
+title: 'Tables and figures'
+author: "Jenna Krall"
+date: "1/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(knitr)
+library(here)
+library(ggthemes)
+library(DescTools)
+library(RColorBrewer)
+library(forcats)
+library(lubridate)
+library(patchwork)
+
+# from roadiness-eda.Rmd
+load(here("figures/eda-tabfig.RData"))
+# from figure2.R
+load(here("figures/fighourly.RData"))
+
+```
+
+# EDA figures/tables
+
+
+
+
+**Distributions of personal in-vehicle PM$_{2.5}$ exposures (log $\mu$g/m$^3$) for each participant (N=25)**
+
+```{r}
+rcomm1 <- boxplot1[[2]]
+ns <- boxplot1[[3]]
+
+dates <- select(rcomm1, date) %>% unique() %>% rename(date_local = date)
+boxplot1 <- ggplot(rcomm1, aes(y = fct_reorder(ID, medl), x  = lPM)) + geom_boxplot() +#outlier.shape = NA
+   ylab(expression(paste("Minutes observed per participant"))) +
+  xlab((expression(paste("log PM"[2.5], " (log ", mu, "g/m"^3, ")")))) +
+  theme_bw() +
+  scale_y_discrete(breaks = ns$ID, labels = ns$n) +
+  theme(text = element_text(size = 12))
+boxplot1 
+
+```
+
+
+
+**Trends in ambient hourly PM$_{2.5}$ (difference in $\mu$g/m$^3$, change relative to daily mean) by hour of the day and by season for each unique day of observation (N=38)**
+
+
+```{r}
+obsdiff <- fighourly[[2]]
+obsdiff <- left_join(dates, obsdiff)
+alps <- fighourly[[3]] - 0.2
+cols <- fighourly[[4]]
+```
+
+
+```{r}
+select(obsdiff, date_local, cold) %>% unique() %>% count(cold) %>%
+  mutate(prop = n / sum(n))
+
+fighourly <- ggplot() +
+  geom_line(data = obsdiff, aes(x = time_local, y = obsdiff, group = date_local, colour = cold,
+                    alpha = cold), linetype = 2) +
+    geom_smooth(data = obsdiff, aes(x = time_local, y = obsdiff, group = cold, colour = cold,
+                    alpha = cold), se = F) +
+  scale_color_manual(name = "Season", values = cols) +
+  scale_alpha_manual(name = "Season", values = alps) +
+  # scale_color_gradient2(name = "Month", labels = lab1, breaks = c(-4,0, 4 ),
+  #                       low = "orange", mid = "blue", high = "green")+
+  ylab(expression(paste("Change in PM"[2.5], " (", mu, "g/m"^3, ")"))) +#, #"\nrelative to daily average"))) +
+  xlab("Hour of day") +
+  theme_bw() +
+  theme(text = element_text(size = 12))
+fighourly
+```
+
+**Daily ambient PM$_{2.5}$ ($\mu$g/m$^3$) for days of observation (N=38)**
+
+```{r}
+va24 <- dailypm[[2]]
+dailypm <- ggplot(va24, aes(x = date_local, y = daily)) +
+  geom_point() +
+  ylab((expression(paste("ambient daily PM"[2.5], " (", mu, "g/m"^3, ")")))) +
+  xlab("Date") +
+  theme_bw() +
+  theme(text = element_text(size = 12))
+dailypm
+
+```
+**Percentage of observations on each road type per participant (N=25)** 
+
+```{r}
+perc <- roadtype1[[2]]
+roadtype1 <- ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) + 
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "red", name = "Percent") +
+  xlab("") + ylab("Participant") +
+  theme(text = element_text(size=12), axis.text.y = element_blank())
+
+roadtype1
+
+```
+
+
+**For each observed trip (N=69), variation in road type and PM$_{2.5}$ over each trip.  PM$_{2.5}$ is shown as the difference in log $\mu$g/m$^3$ from the trip-specific mean to better visualize changes across each trip.**
+
+```{r}
+rcomm1 <- tripplot[[2]]
+```
+
+```{r}
+roadtype2 <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = rtype)) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since obs trip start") +
+  scale_fill_colorblind(name = "Road type") +
+ # theme_bw() +
+  theme(text = element_text(size=12), axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position  = c(.75, .25))
+
+pmtile <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = lPM2)) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since obs trip start") +
+  scale_fill_gradient2(name = "log PM2.5 difference", low = "green", high = "red",
+                       mid = "white") +
+  #theme_bw() +
+  theme(text = element_text(size=12), axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(), legend.position = c(.75, .25))
+
+tripplot <- roadtype2 + pmtile
+tripplot[[2]] = tripplot[[2]] + theme(axis.text.y = element_blank(),
+                                        axis.ticks.y = element_blank(),
+                                        axis.title.y = element_blank() )
+
+tripplot
+
+```
