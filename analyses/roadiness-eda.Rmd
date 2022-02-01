@@ -19,6 +19,7 @@ library(DescTools)
 library(RColorBrewer)
 library(forcats)
 library(lubridate)
+library(patchwork)
 
 
 source(here("rcode/windrose.R"))
@@ -30,15 +31,20 @@ source(here("rcode/windrose.R"))
 # load data
 load(here("data/rcomm2.RData"))
 rcomm <- rcomm2 
+
+load(here("data/va24.RData"))
+
 ```
 
 # Data summary
 
-Our data contains 2323 observations for 25 commuters and 71 commutes.  We observed 1 commute for 10 commuters (40%).  We observed 2-4 commutes for 9 commuters (36%) and 5-6 commutes for 6 commuters (24%).  The number of minutes of total commuting time observed per commuter ranged from 24 to 267 with a median of 54 minutes.  
-
-
+- Our data contains 2311 observations for 25 commuters and 69 commutes.  
 - 38 days of data
 - 45 person-days
+- The number of minutes of total commuting time observed per commuter ranged from 24 to 267 with a median of 54 minutes.  
+- We observed 1 commute for 10 commuters (40%).  We observed 2-4 commutes for 9 commuters (36%) and 5-6 commutes for 6 commuters (24%). 
+
+
 
 ```{r, echo = T}
 # total observations
@@ -72,7 +78,7 @@ select(rcomm, ID, date_local, group) %>% unique() %>% group_by(ID) %>% count() %
 ```
 
 
-The average commute length observed was approximately 30 minutes with commutes ranging from 1 to 99 minutes.
+The average commute length observed was approximately 30 minutes with commutes ranging from 15 to 99 minutes.
 
 ```{r}
 # # length of time per commute
@@ -142,7 +148,7 @@ sum1%>%
 
 ### Across IDs
 
-The average minute PM2.5 across participants was 5.6 mug/m3 ranging from 0 to 24.6 mug/m3.  In general, there was greater variability between participants than within a participant over the commutes, though variability was great for some participants.
+The average minute PM2.5 across participants was 5.5 mug/m3 ranging from 0 to 50.2 mug/m3.  In general, there was greater variability between participants than within a participant over the commutes, though variability was great for some participants.
 
 ```{r}
 select(sum1, ID, lmean, mean,sd) %>% pivot_longer(-ID) %>%
@@ -164,7 +170,22 @@ ggplot(rcomm, aes(y = ID, x  = lPM)) + geom_violin()
 ## Box plots
 
 ```{r}
-ggplot(rcomm, aes(y = ID, x  = lPM)) + geom_boxplot()
+rcomm1 <- group_by(rcomm, ID) %>% mutate(medl = median(lPM, na.rm = T), n = n()) %>%
+  ungroup()
+rcomm1 <- arrange(rcomm1, medl)
+ns <- select(rcomm1, ID, medl, n) %>% unique()
+boxplot1 <- ggplot(rcomm1, aes(y = fct_reorder(ID, medl), x  = lPM)) + geom_boxplot() +#outlier.shape = NA
+   ylab(expression(paste("Minutes observed per participant"))) +
+  xlab((expression(paste("log PM"[2.5], " (log ", mu, "g/m"^3, ")")))) +
+  theme_bw() +
+  scale_y_discrete(breaks = ns$ID, labels = ns$n) +
+  theme(text = element_text(size = 12))
+boxplot1 
+
+boxplot1 <- list(boxplot1, rcomm1, ns)
+
+
+
 ```
 
 
@@ -200,7 +221,7 @@ ggplot(sumdat, aes(x = sdPM, y = ID, colour = ID)) +
 
 2. Possible misclassification 
 
-Most observations (N=1212, 52.7%) were for local roads.  590 observations (25.6%) were on highways and 403 (17.5%) were on local connecting roads which are XX.  The remainder (N=96, 4.2%) were on ramps, tunnels, or others.
+Most observations (N=1215, 52.6%) were for local roads.  600 observations (26%) were on highways and 399 (17.3%) were on local connecting roads which are XX.  The remainder (N=97, 4.2%) were on ramps, tunnels, or others.
 
 ```{r}
 count(rcomm, rtype) %>%
@@ -209,22 +230,62 @@ count(rcomm, rtype) %>%
 
 perc <- group_by(rcomm, ID) %>%
   count(rtype) %>%
-  mutate(perc = n / sum(n) * 100, perc = round(perc, 1)) %>%
+  mutate(perc = n / sum(n) * 100, perc = round(perc, 1),
+         rtype = factor(rtype, levels = c("Local", "LocalConn",
+                                          "High/SecHigh", "Other"))) %>%
   select(-n) %>%
-  arrange(rtype, desc(perc)) 
+  arrange(rtype, rtype, desc(perc)) 
 
 perc %>% kable()
 
-ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) + 
+
+perc1 <- filter(perc, !(rtype %in% c("Local", "Other"))) %>%
+  mutate(rtype = as.character(rtype),
+         rtype = ifelse(rtype != "LocalConn", "high", rtype)) %>%
+  pivot_wider(names_from = "rtype", values_from = "perc") 
+filter(perc1, is.na(LocalConn) | is.na(high)) %>% dim()
+
+roadtype1 <- ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) + 
   geom_tile() +
-  scale_fill_gradient(low = "white", high = "red")
+  scale_fill_gradient(low = "white", high = "red", name = "Percent") +
+  xlab("") + ylab("Participant") +
+  theme(text = element_text(size=12), axis.text.y = element_blank())
+roadtype1
+
+roadtype1 <- list(roadtype1, perc)
 ```
 
 
 ```{r}
-ggplot(rcomm, aes(x = timemin, y = fct_reorder(id2, timemin), fill = rtype)) +
-  geom_tile() + ylab("") +
-  theme(axis.text.y = element_blank())
+rcomm1 <- mutate(rcomm, id2 = fct_reorder(id2, timemin)) %>%
+  arrange(id2) %>%
+  group_by(id2) %>%
+  mutate(mean1 = mean(lPM, na.rm = T), lPM2 = lPM - mean1) %>%
+  ungroup()
+roadtype2 <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = rtype)) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
+  scale_fill_colorblind(name = "Road type") +
+  theme_bw() +
+  theme(text = element_text(size=12), axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position  = c(.75, .25))
+
+pmtile <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = lPM2)) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
+  scale_fill_gradient(name = "log PM2.5 difference", low = "#FFFF33", high = "#FF3333") +
+  theme_bw() +
+  theme(text = element_text(size=12), axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(), legend.position = c(.75, .25))
+
+
+pmtile
+tripplot <- roadtype2 + pmtile
+tripplot[[2]] = tripplot[[2]] + theme(axis.text.y = element_blank(),
+                                        axis.ticks.y = element_blank(),
+                                        axis.title.y = element_blank() )
+
+tripplot
+tripplot <- list(tripplot, rcomm1)
 ```
 
 Not much difference if take mode over commute type
@@ -402,3 +463,42 @@ Possible multiple obs of same commute:
 - GMU 1016
 - GMU 1007
 - GMU 1001
+
+
+
+# Daily PM
+
+```{r}
+dates <- select(rcomm, date_local) %>% unique()
+if(nrow(dates) != 38) {
+  stop("Incorrect dates: fix rcomm dates here")
+}
+
+va24 <- left_join(dates, va24)
+
+dailypm <- ggplot(va24, aes(x = date_local, y = daily)) +
+  geom_point() +
+  ylab((expression(paste("ambient daily PM"[2.5], " (", mu, "g/m"^3, ")")))) +
+  xlab("Date") +
+  theme_bw() +
+  theme(text = element_text(size = 12))
+dailypm
+
+dailypm <- list(dailypm, va24)
+
+summarize(va24, mean(daily), sd(daily), min(daily), max(daily))
+```
+
+
+# Participant characteristics
+
+
+```{r}
+part <- select(rcomm, ID) %>% unique()
+
+
+```
+
+```{r}
+save(boxplot1, roadtype1, tripplot, dailypm, file = here("figures/eda-tabfig.RData"))
+```
