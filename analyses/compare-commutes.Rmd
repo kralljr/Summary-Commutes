@@ -41,6 +41,8 @@ load(here("data/MainStates1.RData"))
 ```
 
 
+
+
 ```{r plotfun, fig.width = 10}
 
 
@@ -231,6 +233,7 @@ compare <- full_join(jmorning, jevening) %>%
          mutate(mindate = min(date(rdatetime)), date1 = ifelse(date(rdatetime) == mindate, "day1", "day2"))
 
 
+
 compare1 <- ungroup(compare) %>%
   dplyr::select(ID, commute, date1, maxtime) %>% unique() %>%
   pivot_wider(names_from = "date1", values_from = "maxtime") %>%
@@ -249,8 +252,82 @@ compare1 <- full_join(compare1, hours)
 # six with close times, six with different
 # filter(compare1, abs(diff) < 5)
 
-kable(compare1)
+compare2 <- ungroup(compare1) %>% arrange(ID, commute)
+kable(compare2)
 
+
+```
+
+
+**Total observations**
+
+```{r}
+ungroup(compare) %>%
+  dplyr::select(ID, commute, date1, maxtime) %>% unique() %>%
+  summarize(n = as.numeric(sum(maxtime))) %>%
+  # count minute 0 obs, subtract 4 missing minutes
+  mutate(n = n + 24, n = n- 4)
+
+```
+
+
+
+```{r, eval = F}
+# check weird number of obs
+
+ungroup(compare) %>% dplyr::select(ID, commute, date1, maxtime) %>%
+  unique() %>%
+  summarize(sum(maxtime))
+
+try0 <- ungroup(compare) %>% dplyr::select(ID, commute, date1, rdatetime, min) %>%
+  unique() %>% mutate(diff = as.numeric(rdatetime - min)) %>%
+  group_by(ID, min) %>%
+  summarize(max = max(diff), max = max / 60) %>%
+  ungroup() 
+
+try0 %>%
+  summarize(s1 = sum(max)) 
+
+c1 <- ungroup(compare) %>% dplyr::select(ID, commute, date1, rdatetime, min) %>%
+  unique()
+nrow(c1)
+
+
+try1 <- group_by(c1, ID, min) %>% count(min) %>% ungroup() %>% rename(n2 = n)
+summarize(try1,  n2 = sum(n2))
+
+check40 <- full_join(try0, try1) %>%
+  mutate(diff = n2 - max) %>% filter(diff != 1)
+check40
+check40 <- check40 %>%
+  dplyr::select(min)
+
+# gap in obs: 4 minutes missing (8:57, 58, 59, 00)
+filter(c1, ID == "GMU1040", min == check40$min) %>% View()
+
+# 24: 0 minute obs
+ungroup(compare) %>% dplyr::select(ID, commute, date1, rdatetime, min) %>%
+  unique() %>% mutate(diff = as.numeric(rdatetime - min)) %>%
+  filter(diff == 0)
+
+```
+
+```{r, eval = F}
+# check GMU1040
+gmu1040 <- filter(gpslatlon$dat, ID == "GMU1040")
+colnames(gmu1040)[2] <- "date"
+#2019-02-13
+gmu1040 <- filter(gmu1040, substr(date, 1, 5) == "13 Fe") %>%
+  mutate(hour = as.numeric(substr(date, 18, 19)),
+                           minute = as.numeric(substr(date, 21, 22)))
+
+
+as_datetime(as.POSIXct("2019-02-13 00:10:10", tz = "GMT"), tz = "America/New_York") 
+
+as_datetime(as.POSIXct("2019-02-13 08:48:00", tz = "America/New_York"), tz = "GMT") 
+
+gmu1040 %>%
+  filter((hour == 13 & minute > 55) | (hour == 14 & minute < 2)) %>% View(  )
 
 ```
 
@@ -259,14 +336,16 @@ kable(compare1)
 
 ```{r}
 mutate(compare1, absdiff = abs(diffhour)) %>%
-  summarize(mean(absdiff), median(absdiff), min(absdiff), max(absdiff))
+  summarize(mean(absdiff), median(absdiff), min(absdiff), max(absdiff)) %>%
+  kable()
 ```
 
 **Differences between commute length**
 
 ```{r}
 mutate(compare1, absdiff = abs(diff)) %>%
-  summarize(mean(absdiff), median(absdiff), min(absdiff), max(absdiff))
+  summarize(mean(absdiff), median(absdiff), min(absdiff), max(absdiff)) %>%
+  kable()
 
 ```
 
@@ -284,6 +363,11 @@ pm1 <- dplyr::select(pm1, rdatetime, PM, ID) %>% unique() %>%
                 mutate(  lPM = log(PM + 0.01))
 
 
+
+# restrict compare to only those with unique PM2.5 measurements (minute
+compare1 <- compare %>%  dplyr::select(-c("Longitude", "Latitude")) %>%
+  unique()
+
 comparepm <- left_join(compare, pm1) %>%
   mutate(time_local = hour(rdatetime),
          time_local = ifelse(time_local == 24, 0, time_local)) %>%
@@ -292,7 +376,7 @@ comparepm <- left_join(compare, pm1) %>%
   ungroup() %>%
   group_by(ID, date, commute) %>%
   mutate( time = as.numeric(time),maxtime = max(time),
-         proptime = time / maxtime, adpmd = PM - daily, ahour = PM + obsdiff )
+         proptime = time / maxtime, adpmd = PM - daily, ahour = PM + obsdiff ) 
 ```
 
 
@@ -333,7 +417,21 @@ s1b <- group_by(comparepm, ID, date1, commute) %>%
   group_by(ID, commute) %>%
          mutate(minmean = min(mean),day = ifelse(mean == minmean, "Obs1", "Obs2")) %>% ungroup() %>% dplyr::select(ID, date1, commute, mean) %>%
   pivot_wider(names_from = "date1", values_from = "mean")
-ggplot(s1b, aes(x = day1, y = day2)) + geom_point() + geom_abline(slope = 1, intercept = 0, linetype = 2) + ylim(0, 18) + xlab("Observation 1 median PM2.5") + ylab("Observation 2 median PM2.5")
+```
+
+
+
+```{r}
+mutate(s1b, diff = abs(day1 - day2)) %>%
+  summarize(median(diff), mean(diff), min(diff), max(diff))
+  
+
+pairedpoint <- ggplot(s1b, aes(x = day1, y = day2)) + geom_point() + geom_abline(slope = 1, intercept = 0, linetype = 2) + ylim(0, 18) + 
+  xlab(expression(paste("Observation 1 median PM"[2.5], " (", mu, "g/m"^3, ")"))) + 
+  ylab(expression(paste("Observation 2 median PM"[2.5], " (", mu, "g/m"^3, ")"))) + 
+  theme_bw() +
+  theme(text = element_text(size = 12))
+pairedpoint <- list(pairedpoint, s1b)
 ```
 
 
@@ -414,4 +512,9 @@ filter(s1b, day1 > 5 | day2 > 5)
 # color by diff in 24 hour PM2.5
 # 37 much longer on day1 (4:30 vs. 3:45 commute time), maybe different overall commute
 # cumulative PM over commute adjusted for commute length
+```
+
+
+```{r}
+save(pairedpoint, file = here("data/commutecompare-res.RData"))
 ```
