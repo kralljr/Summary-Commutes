@@ -41,7 +41,7 @@ load(here("data/MainStates1.RData"))
 ```
 
 
-```{r plotfun}
+```{r plotfun, fig.width = 10}
 
 
 g2 <- function(dat) {
@@ -74,7 +74,7 @@ rcomm2 <- filter(rcomm2, ID %in% ids) %>%
   mutate(dt1 = lubridate::date(rdatetime), 
                 dt2 =  lubridate::as_datetime(dt1),
                 dt2= lubridate::force_tz(dt2, "America/New_York"),
-                diff1 = rdatetime - dt2, diff1 = diff1 / 60 / 60)
+                diff1 = rdatetime - dt2) #, diff1 = diff1 / 60 / 60)
 
 
 # GPS data
@@ -103,6 +103,7 @@ rc1 <- full_join(rc1, rows)
 # join GPS and commute
 join1 <- left_join(rc1, dat) %>% na.omit()
 
+
 ```
 
 
@@ -110,7 +111,7 @@ join1 <- left_join(rc1, dat) %>% na.omit()
 # Morning commutes
 
 
-```{r}
+```{r, fig.width =10}
 morning <- filter(rcomm2, hour(rdatetime) < 11)
 # morning only
 # 1, 7, 16, 18 (3?), 
@@ -134,7 +135,7 @@ ggplot(morning, aes(x = diff1, y = date_local, fill = rtype)) +
 - 35: 2 directions
 - 36: Different destination/no overlap
  
-```{r, fig.height=3}
+```{r, fig.height=3, fig.width = 5}
 
 
 # restrict to same morning commutes
@@ -162,8 +163,6 @@ for(i in seq_along(unid)) {
 }
 
 ```
-
-
 
 
 # Evening commutes
@@ -209,7 +208,12 @@ for(i in seq_along(unid)) {
   print(g2(filter(jevening, ID == unid[i])))
 }
 
+
+
 ```
+
+
+
 
 
 # Commute compare
@@ -248,7 +252,21 @@ compare1 <- full_join(compare1, hours)
 kable(compare1)
 
 
+```
 
+
+**Differences between commute start time**
+
+```{r}
+mutate(compare1, absdiff = abs(diffhour)) %>%
+  summarize(mean(absdiff), median(absdiff), min(absdiff), max(absdiff))
+```
+
+**Differences between commute length**
+
+```{r}
+mutate(compare1, absdiff = abs(diff)) %>%
+  summarize(mean(absdiff), median(absdiff), min(absdiff), max(absdiff))
 
 ```
 
