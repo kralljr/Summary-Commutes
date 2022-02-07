@@ -1,5 +1,5 @@
 ---
-title: 'Roadiness: first analysis'
+title: 'Roadiness: analysis'
 author: "Jenna Krall"
 date: "10/1/2021"
 output: html_document
@@ -19,6 +19,8 @@ library(broom.mixed)
 library(ggthemes)
 library(nlme)
 library(forcats)
+library(patchwork)
+library(RColorBrewer)
 # library(lmeInfo)
 
 ```
@@ -27,192 +29,30 @@ library(forcats)
 ```{r}
 # load data
 load(here("data/rcomm2.RData"))
-rcomm <- rcomm2 
-
 ```
 
-# Explore
+# Distribution of PM
 
+- Remove PM < 25for models (for normality/skewness)
+
+Percent removed (1. <25, 2. missingness in model ocmponents)
 
 ```{r adjust}
-rcomm <- filter(rcomm, PM < 25)
-rcomm <- mutate(rcomm, aPM = PM - daily, aPM2 = PM + hourly, aPMall = aPM + hourly,
-                cat5sm = fct_relevel(cat5sm, "NW"))
+# Need to remove outliers?
 
-rcomm1 <- dplyr::select(rcomm, ID, rdatetime, rness, PM, aPM : aPMall) %>%
-  pivot_longer(PM : aPMall)
+# remove
+shift <- 0.09
+rcomm <- filter(rcomm2, PM < 25)  %>% #, PM > 0) 
+  mutate(lPM = log(PM + shift),
+    cat5sm = fct_relevel(cat5sm, "NW"))
 
-```
-
-
-```{r}
-ggplot(rcomm1, aes(x = value)) + geom_histogram() +
-  facet_wrap(~name)
-ggplot(rcomm1, aes(x = value)) + geom_boxplot() +
-  facet_wrap(~name)
-
-ggplot(rcomm1, aes(x = log(value + 1))) + geom_boxplot() +
-  facet_wrap(~name)
-
-group_by(rcomm1, name) %>% 
-  summarize(mean = mean(value), sd = sd(value),
-            median = median(value), IQR = IQR(value),
-            q25 = quantile(value, probs = 0.25), 
-            q75 = quantile(value, probs = 0.75),
-            min = min(value), max = max(value))
-```
-
-```{r}
-
-ggplot(rcomm1, aes(x = rness, y = value)) +
-   geom_point() +geom_smooth() +
-  facet_wrap(~name)
-
-```
-# Try regression
-
-```{r}
-lmer1 <- with(rcomm, lmer(PM ~ rness +  (1 | ID))) %>% tidy(conf.int = T) %>%
-  mutate(model = "Unadjusted")
-
-lmer2 <- with(rcomm, lmer(PM ~ rness + daily  + (1 | ID))) %>% tidy(conf.int = T)%>%
-  mutate(model = "DailyAdj")
-
-
-lmer4 <- with(rcomm, lmer(PM ~ rness + daily + hourly  + (1 | ID)))
-almer4 <- augment(lmer4)
-ggplot(almer4, aes(x = rness, y = .resid)) + geom_point()
-ggplot(almer4, aes(x = .resid)) + geom_histogram()
-
-
-lmer4 <- lmer4 %>% tidy(conf.int = T)%>%
-  mutate(model = "HourlyAdj")
-
-
-
-
-lmerd <- with(rcomm, lmer(aPM ~ rness + (1 | ID))) %>% tidy(conf.int = T) %>%
-  mutate(model = "DiffDailyAdj")
-lmerd2 <- with(rcomm, lmer(aPM2 ~ rness + (1 | ID))) %>% tidy(conf.int = T) %>%
-  mutate(model = "DiffTimeAdj")
-lmerd3 <- with(rcomm, lmer(aPMall ~ rness + (1 | ID))) %>% tidy(conf.int = T) %>%
-  mutate(model = "DiffDTAdj")
-# windows?
-
-lmerall <- full_join(lmer1, lmer2) %>%  full_join(., lmer4) %>%
-  full_join(., lmerd) %>% full_join(., lmerd2) %>% full_join(., lmerd3) %>%
-  filter(term == "rness")
-```
-
-
-```{r, fig.height = 3, fig.width = 4}
-ggplot(lmerall, aes(y = model, x = estimate, colour = model)) + 
-  geom_pointrange(aes(xmin = conf.low, xmax = conf.high)) +
-  scale_color_colorblind() +
-  ylab("") + xlab("Change in PM2.5 with increased roadiness") +
-  geom_vline(xintercept = 0, linetype =2, colour = "grey50") +
-  theme_bw() +
-  theme(legend.position = "none")
-```
-
-
-
-
-LME components
-
-- sigma: the estimated within-group error standard deviation (correlation strucnture)
-
-```{r}
-# all commutes nested within person only
-cs1 <- corAR1(form = ~timemin |ID/id3)
-# cs1 <- corARMA(form = ~timemin |ID/id3, p = 1, q = 2)
-cs1 <- Initialize(cs1, data = rcomm)
-
-lme1b <- lme(PM ~ srness +timemin, random=~1|ID/id3, data=rcomm, correlation= cs1)
-
-# explore autocor of residuals
-ACF(lme1b, resType = "normalized") %>% plot()
-
-
-lme0 <- lme(PM ~ srness + daily + obs, random=~1|ID/id3, data=rcomm)
-
-# RE per trip
-cs1 <- corAR1(form = ~1| id2)
-# cs1 <- corARMA(form = ~ 1|ID/group, p = 5, q = 5)
-cs1 <- Initialize(cs1, data = rcomm)
-
-lme1c <- lme(PM ~ srness, random=~1|id2, data=rcomm, correlation= cs1)
-
-
-
-
-cs1 <- corAR1(form = ~1|ID/date_local/group)
-# cs1 <- corARMA(form = ~ 1|ID/group, p = 5, q = 5)
-cs1 <- Initialize(cs1, data = rcomm)
-
-lme1d <- lme(PM ~ srness, random=~1|ID/date_local/group, data=rcomm, correlation= cs1)
-
-
-# explore autocor of residuals
-ACF(lme0) %>% plot()
-AIC(lme1b)
-
-lme1b %>% tidy()
-
-lme1b <- augment(lme1b)
-
-
-hist(lme1b$.resid)
-plot(lme1b$.fitted, lme1b$.resid)
-plot(lme1b$srness, lme1b$.resid)
-
-
-ggplot(lme1b, aes(x = rness, y = .resid, colour = hourly)) + geom_point()
-```
-
-# compare lme, nlme
-```{r}
-lme2 <- lmer(PM ~ rness + (1 | ID) + (1 | ID: group), data = rcomm)
-lme2 %>% tidy()
-
-lme1 <- lme(PM ~ rness, random=~1|ID/group, data=rcomm)
-lme1 %>% tidy
-
-# fixed effect for ID
-lme2 <- lmer(lPM ~ rness + ID +  (1 | ID: group), data = rcomm)
-lme2 <- lme2 %>% tidy(conf.int = T)
-
-lme1 <- lme(lPM ~ rness + ID, random=~1|ID/group, data=rcomm)
-lme1 <- lme1 %>% tidy(conf.int = T)
-
-lme1 <- mutate(lme1, type = "lme")
-lme2 <- mutate(lme2, type = "lmer")
-lmeall <- full_join(lme1, lme2)
-
-ggplot(lmeall, aes(x = term, y = estimate, colour = type)) +
-  geom_point(position = position_dodge(1)) +
-  theme(axis.text.x= element_text(angle = 90, vjust = 0.5, hjust = 1))
-```
-
-
-
-# check distribution of PM
-
-```{r}
-ggplot(rcomm, aes(y = PM, x = rness, colour = ID)) + geom_point()
-ggplot(rcomm, aes(y = log(PM + 0.2), x = ID, colour = ID)) + geom_violin() +
-  theme(legend.position = "none")
-```
-
-#  Effect plots
-
-```{r}
-rcommU <- dplyr::select(rcomm, srness, rtype, id2, PM, daily, 
+# ID 3 is date/commute
+rcomm1 <- dplyr::select(rcomm, srness, rtype, id3, PM, daily, 
     obsdiff, ID,date_local, group, awnd , prcpbin , 
-    tmax, snowbin, tmin, cat5sm, timemin) %>% na.omit()
+    tmax, snowbin, tmin, cat5sm, timemin, lPM) %>% na.omit() 
 
-iqrs <- dplyr::select(rcommU, -c(PM, ID, date_local, group,  
-                                prcpbin, snowbin, rtype, id2, cat5sm)) %>%
+iqrs <- dplyr::select(rcomm1, -c(PM, lPM, ID, date_local, group,  
+                                prcpbin, snowbin, rtype, id3, cat5sm)) %>%
   pivot_longer(srness : tmin) %>%
   group_by(name)
 
@@ -221,61 +61,147 @@ iqrs <- iqrs %>%
   mutate(IQR = ifelse(name %in% c("snowbin", "prcpbin"), 1, IQR)) %>%
   rename(term = name)
 
-cs1 <- corAR1(form = ~1|ID/group)
-# cs1 <- corARMA(form = ~ 1|ID/group, p = 5, q = 5)
-cs1 <- Initialize(cs1, data = rcommU)
-
-lme1d <- lme(PM ~ srness + daily + obsdiff + awnd + prcpbin + tmax + snowbin + tmin + rtype + timemin + cat5sm, random=~timemin|ID/group, data=rcommU, correlation= cs1)
-
-ACF(lme1d, resType = "normalized", maxLag = 10) %>% plot()
-
-resid <- resid(lme1d, type = "normalized")
+# percent removed
+((1 - nrow(rcomm) / nrow(rcomm2)) * 100) %>% round(., 1)
+((1 - nrow(rcomm1) / nrow(rcomm)) * 100) %>% round(., 1)
 
 ```
 
-```{r}
-rcommU1 <- group_by(rcommU, id2) %>% mutate(mean = mean(PM), dPM = PM - mean)
-ggplot(rcommU1, aes(x = timemin, y = dPM, group = id2)) + geom_smooth()
-
-```
-
-
-## Variance components
-
-```{r, echo = T}
-VarCorr(lme1d)
-```
-
-```{r}
-lme1d$sigma
-lme1d$apVar # vcov of variance comp
-lme1d$modelStruct
-
-intervals (lme1d)
-
-sqrt(2.1)
-
-lme1d$coef$random$ID %>% sd()
-lme1d$coef$random$date_local %>% sd()
-lme1d$coef$random$group %>% sd()
-
-# Random effects:
-#  Formula: ~1 | ID
-#         (Intercept)
-# StdDev:    2.105865
+```{r, eval = F}
+# adjusting PM
+# rcomm <- mutate(rcomm2, aPM = PM - daily, aPM2 = PM + hourly, aPMall = aPM + hourly,
+#                 cat5sm = fct_relevel(cat5sm, "NW"))
 # 
-#  Formula: ~1 | date_local %in% ID
-#         (Intercept)
-# StdDev:   0.9158798
-# 
-#  Formula: ~1 | group %in% date_local %in% ID
-#         (Intercept) Residual
-# StdDev:    2.738501 1.791558
+# rcomm1 <- dplyr::select(rcomm, ID, rdatetime, rness, PM, aPM : aPMall) %>%
+#   pivot_longer(PM : aPMall)
 
-```         
-         
+```
+
+
+
+
+```{r hists}
+
+g1 <- ggplot(rcomm1, aes(x = PM)) + geom_histogram(bins = 20) 
+g2 <- ggplot(rcomm1, aes(x = PM)) + geom_boxplot() 
+g3 <- ggplot(rcomm1, aes(x = lPM)) + geom_histogram(bins =20) 
+
+g4 <- ggplot(rcomm1, aes(x = lPM)) + geom_boxplot() 
+
+(g1 + g2) /( g3 + g4 )
+```
+
+
 ```{r}
-t1 <- tidy(lme1d, conf.int = T) %>%
+rcomm1 %>% 
+  rename(value = PM) %>%
+  summarize(mean = mean(value), sd = sd(value),
+            median = median(value), IQR = IQR(value),
+            q25 = quantile(value, probs = 0.25), 
+            q75 = quantile(value, probs = 0.75),
+            min = min(value), max = max(value))
+```
+
+
+
+
+
+
+# Visualize associations with lPM
+
+```{r}
+
+g1 <- ggplot(rcomm1, aes(x = srness, y = lPM)) +
+   geom_point() +geom_smooth() 
+
+
+g2 <- ggplot(rcomm1, aes(x = daily, y = lPM)) +
+   geom_point() +geom_smooth() 
+
+
+g3 <- ggplot(rcomm1, aes(x = obsdiff, y = lPM)) +
+   geom_point() +geom_smooth()  + xlab("Hourly diff")
+
+g4 <- ggplot(rcomm1, aes(x = awnd, y = lPM)) +
+   geom_point() +geom_smooth() 
+
+g5 <- ggplot(rcomm1, aes(x = tmax, y = lPM)) +
+   geom_point() +geom_smooth() 
+
+g6 <- ggplot(rcomm1, aes(x = tmin, y = lPM)) +
+   geom_point() +geom_smooth() 
+
+g7 <- ggplot(rcomm1, aes(x = timemin, y = lPM)) +
+   geom_point() +geom_smooth() 
+
+(g1 + g2 + g3 ) / (g4 + g5 + g6 )
+
+g7
+```
+
+
+## Associations with time min
+
+```{r}
+rcommU1 <- group_by(rcomm1, id3) %>% mutate(mean = mean(lPM), dPM = lPM - mean)
+ggplot(rcommU1, aes(x = timemin, y = dPM, group = id3)) + geom_smooth()
+
+```
+
+
+
+
+
+
+
+
+# Model
+
+
+
+
+
+
+
+#  Effect plots
+
+```{r}
+# Fit AR1 correlation
+# groups are big / small
+
+
+# ID/id3 and ID/id2 are the same: ID/group differs ( does not account for diff trips)
+# ID/date/id3, ID/group/id3 are the same, no variation at level 2 (not enough mult trips/day)
+
+# 
+rcomm1 <- group_by(rcomm1, ID, id3) %>%
+  arrange(rcomm1, timemin) %>%
+  ungroup()
+
+
+cs1 <- corAR1(form = ~1|ID/id3)
+cs1 <- Initialize(cs1, data = rcomm1)
+
+# Fit model
+lme1 <- lme(lPM ~ srness + daily + obsdiff + awnd + prcpbin + 
+               tmax + snowbin + tmin + rtype + 
+               cat5sm, 
+            random=~1|ID/id3, 
+             data=rcomm1, correlation= cs1)
+
+# Get residuals
+lme1b <- augment(lme1)
+
+```
+
+
+
+## Plot
+
+
+ 
+```{r}
+t1 <- tidy(lme1, conf.int = T) %>%
   filter(effect == "fixed", term != "(Intercept)") %>%
   full_join(iqrs) %>%
   mutate(IQR = ifelse(is.na(IQR), 1, IQR),
@@ -288,22 +214,39 @@ t1 <- tidy(lme1d, conf.int = T) %>%
                     "Local conn", "Local", "Other",
                     "Max Temp",  "Min Temp", "Precipitation","Snow", "Wind", "WindDir SE", "WindDir Other")),
          type = ifelse(term %in% c("daily", "obsdiff", "srness",   "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "timemin"), "Pollution", "Meteorology"),
-         type2 = ifelse(term %in% c("prcpbin", "snowbin",  "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "cat5smNW", "cat5smOther"), "cat", "num")) 
+         type2 = ifelse(term %in% c("prcpbin", "snowbin",  "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "cat5smSE", "cat5smOther"), "cat", "num")) 
 ```
+
 
 
 ```{r}
 
-g1 <- ggplot(filter(t1, type2 == "cat"), aes(y = term1, x = estimate)) +
-  geom_pointrange(aes(xmin = conf.low, xmax = conf.high)) +
+cat<- filter(t1, type2 == "cat") %>%
+  mutate(type2 = ifelse(term %in% c("cat5smSE", "cat5smOther"), "Wind direction",
+                        ifelse(term %in% c("rtypeOther", "rtypeLocal", "rtypeLocalConn"), "Road type",
+                               as.character(term1))),
+         term2 = ifelse(term %in% c("cat5smSE","rtypeLocal" ), 2, 
+                        ifelse(term %in% c("cat5smOther", "rtypeLocalConn"), 3,
+                               ifelse(term == "rtypeOther", 4, 1))), term2 = factor(term2),
+         type2 = factor(type2, levels = c("Precipitation", "Snow", "Wind direction", "Road type"))) 
+
+cols <- brewer.pal(8, "Dark2")
+g1 <- ggplot(cat, aes(y = term1, x = estimate)) +
+  geom_pointrange(aes(xmin = conf.low, xmax = conf.high, colour = term2), 
+                  position = position_dodge(0.2)) +
+  scale_colour_manual(values = cols,  guide = "none") +
   geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
   xlab("") +
-  ylab(expression(paste("Change in PM"[2.5], " (", mu, "g/m"^3, ")" , " per IQR increase"))) +
+  ylab(expression(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ") compared to reference"))) +
   theme_bw() +
-  theme(text = element_text(size = 24)) #+ facet_wrap(~type, scales = "free", ncol = 1)
+  theme(text = element_text(size = 12)) + facet_wrap(~type2, scales = "free_y", ncol = 1)
 
 g1
+
+
+# arrange(cat, p.value)
 ```
+
 
 
 ```{r}
@@ -312,9 +255,127 @@ g2 <- ggplot(filter(t1, type2 != "cat"), aes(y = term1, x = estimateIQR)) +
   geom_pointrange(aes(xmin = conf.lowIQR, xmax = conf.highIQR)) +
   geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
   xlab("") +
-  ylab(expression(paste("Change in PM"[2.5], " (", mu, "g/m"^3, ")" , " per IQR increase"))) +
+  ylab(expression(atop(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ")" ), " per IQR increase"))) +
   theme_bw() +
-  theme(text = element_text(size = 24)) + facet_wrap(~type, scales = "free", ncol = 1)
+  theme(text = element_text(size = 24)) 
 
 g2
 ```
+
+
+```{r}
+arrange(t1, p.value)
+
+arrange(t1, desc(abs(estimate)))
+```
+
+## Check residuals
+
+
+
+```{r}
+ACF(lme1, resType = "normalized", maxLag = 10) %>% plot()
+
+hist(lme1b$.resid)
+
+
+long <- pivot_longer(lme1b, c(daily, obsdiff, awnd, tmax, tmin, srness, .fitted))
+ggplot(long, aes(x = value, y = .resid)) +
+  geom_point() +
+  facet_wrap(~name, scales = "free")
+
+long <- mutate(lme1b, snowbin = factor(snowbin),
+               prcpbin = factor(prcpbin)) %>%
+  pivot_longer(c(snowbin, prcpbin, cat5sm, rtype)) 
+ggplot(long, aes(x = value, y = .resid)) +
+  geom_boxplot() +
+  facet_wrap(~name, scales = "free")
+
+
+```
+
+
+
+
+## Variance components
+
+
+
+
+
+
+
+
+LME components
+
+- sigma: the estimated within-group error standard deviation (correlation structure): `r lme1$sigma`
+- AR correlation: `r lme1$modelStruct$corStruct`
+- Model structure:
+
+```{r}
+lme1$modelStruct$reStruct
+
+#
+
+# > print(lme1$modelStruct$reStruct)
+# Random effects:
+#  Formula: ~1 | ID
+#         (Intercept)
+# StdDev:    1.323336 (DIVIDED BY RESIDUAL)
+# 
+#  Formula: ~1 | id3 %in% ID
+#         (Intercept) Residual
+# StdDev:    1.588816        1
+
+# from lme print
+# Random effects:
+#  Formula: ~1 | ID
+#         (Intercept)
+# StdDev:   0.5211989
+# 
+#  Formula: ~1 | id3 %in% ID
+#         (Intercept)  Residual
+# StdDev:   0.6257585 0.3938522
+
+
+
+
+
+
+
+# WHAT IS THIS?
+ # > print(lme1$modelStruct)
+# reStruct  parameters:
+#       id3        ID 
+# 0.4629889 0.2801560 
+# corStruct  parameters:
+# [1] 0.211365
+# 
+# sqrt(0.2801560 )
+# sqrt(0.4629889)
+```
+
+
+
+```{r, eval = F}
+# lme1$apVar # vcov of variance comp
+```
+
+```{r}
+
+# an object inheriting from class lmeStruct, representing a list of mixed-effects model components, such as reStruct, corStruct, and varFunc objects.
+
+
+# other misc:
+# cs1 <- corARMA(form = ~ 1|ID/group, p = 5, q = 5)
+# resid <- resid(lme1, type = "normalized")
+# VarCorr(lme1d)
+
+
+# # basically 0
+# lme2$coef$random$date_local %>% sd()
+# lme3$coef$random$group %>% sd()
+
+```         
+    
+
