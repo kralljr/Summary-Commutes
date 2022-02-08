@@ -29,6 +29,10 @@ library(RColorBrewer)
 ```{r}
 # load data
 load(here("data/rcomm2.RData"))
+
+
+# get functions for models
+source(here("functions/model-funs.R"))
 ```
 
 # Distribution of PM
@@ -60,6 +64,8 @@ iqrs <- iqrs %>%
   summarize(IQR = IQR(value)) %>%
   mutate(IQR = ifelse(name %in% c("snowbin", "prcpbin"), 1, IQR)) %>%
   rename(term = name)
+
+save(iqrs, file = here("data/iqrs.RData"))
 
 # percent removed
 ((1 - nrow(rcomm) / nrow(rcomm2)) * 100) %>% round(., 1)
@@ -178,20 +184,21 @@ rcomm1 <- group_by(rcomm1, ID, id3) %>%
   arrange(rcomm1, timemin) %>%
   ungroup()
 
+```
 
-cs1 <- corAR1(form = ~1|ID/id3)
-cs1 <- Initialize(cs1, data = rcomm1)
 
-# Fit model
-lme1 <- lme(lPM ~ srness + daily + obsdiff + awnd + prcpbin + 
+```{r}
+eqn1 <- "lPM ~ srness + daily + obsdiff + awnd + prcpbin + 
                tmax + snowbin + tmin + rtype + 
-               cat5sm, 
-            random=~1|ID/id3, 
-             data=rcomm1, correlation= cs1)
+               cat5sm"
+res <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3") 
 
 # Get residuals
-lme1b <- augment(lme1)
+lme1b <- res$aug
+lme1 <- res$lme1
+t1 <- res$t1
 
+save(res, file = here("results/main-res.RData"))
 ```
 
 
@@ -199,74 +206,24 @@ lme1b <- augment(lme1)
 ## Plot
 
 
- 
+
 ```{r}
-t1 <- tidy(lme1, conf.int = T) %>%
-  filter(effect == "fixed", term != "(Intercept)") %>%
-  full_join(iqrs) %>%
-  mutate(IQR = ifelse(is.na(IQR), 1, IQR),
-         estimateIQR = estimate * IQR, conf.lowIQR = conf.low * IQR,
-         conf.highIQR = conf.high * IQR,
-         term1 = factor(term, levels = c("daily", "obsdiff", "srness", "timemin",
-                            "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", 
-                          "tmax" ,"tmin",  "prcpbin", "snowbin" , "awnd", "cat5smSE", "cat5smOther"),
-         labels = c("Daily PM2.5", "Hourly PM2.5", "Roadiness", "Time since start",
-                    "Local conn", "Local", "Other",
-                    "Max Temp",  "Min Temp", "Precipitation","Snow", "Wind", "WindDir SE", "WindDir Other")),
-         type = ifelse(term %in% c("daily", "obsdiff", "srness",   "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "timemin"), "Pollution", "Meteorology"),
-         type2 = ifelse(term %in% c("prcpbin", "snowbin",  "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "cat5smSE", "cat5smOther"), "cat", "num")) 
+plot_cat(res)
 ```
 
 
 
 ```{r}
-
-cat<- filter(t1, type2 == "cat") %>%
-  mutate(type2 = ifelse(term %in% c("cat5smSE", "cat5smOther"), "Wind direction",
-                        ifelse(term %in% c("rtypeOther", "rtypeLocal", "rtypeLocalConn"), "Road type",
-                               as.character(term1))),
-         term2 = ifelse(term %in% c("cat5smSE","rtypeLocal" ), 2, 
-                        ifelse(term %in% c("cat5smOther", "rtypeLocalConn"), 3,
-                               ifelse(term == "rtypeOther", 4, 1))), term2 = factor(term2),
-         type2 = factor(type2, levels = c("Precipitation", "Snow", "Wind direction", "Road type"))) 
-
-cols <- brewer.pal(8, "Dark2")
-g1 <- ggplot(cat, aes(y = term1, x = estimate)) +
-  geom_pointrange(aes(xmin = conf.low, xmax = conf.high, colour = term2), 
-                  position = position_dodge(0.2)) +
-  scale_colour_manual(values = cols,  guide = "none") +
-  geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
-  xlab("") +
-  ylab(expression(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ") compared to reference"))) +
-  theme_bw() +
-  theme(text = element_text(size = 12)) + facet_wrap(~type2, scales = "free_y", ncol = 1)
-
-g1
-
-
-# arrange(cat, p.value)
-```
-
-
-
-```{r}
-
-g2 <- ggplot(filter(t1, type2 != "cat"), aes(y = term1, x = estimateIQR)) +
-  geom_pointrange(aes(xmin = conf.lowIQR, xmax = conf.highIQR)) +
-  geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
-  xlab("") +
-  ylab(expression(atop(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ")" ), " per IQR increase"))) +
-  theme_bw() +
-  theme(text = element_text(size = 24)) 
-
-g2
+plot_nocat(res)
 ```
 
 
 ```{r}
-arrange(t1, p.value)
+arrange(t1, p.value) %>% select(term1, IQR,estimateIQR ,conf.lowIQR, conf.highIQR, df, p.value ) %>%
+  kable(digits = 2)
 
-arrange(t1, desc(abs(estimate)))
+arrange(t1, desc(abs(estimateIQR)))%>% select(term1, IQR,estimateIQR ,conf.lowIQR, conf.highIQR, df, p.value ) %>%
+  kable(digits = 2)
 ```
 
 ## Check residuals
@@ -308,15 +265,23 @@ ggplot(long, aes(x = value, y = .resid)) +
 
 LME components
 
-- sigma: the estimated within-group error standard deviation (correlation structure): `r lme1$sigma`
+- sigma: the estimated within-group error standard deviation: `r lme1$sigma`
 - AR correlation: `r lme1$modelStruct$corStruct`
-- Model structure:
+- Components of variability:
 
 ```{r}
-lme1$modelStruct$reStruct
+
+ggplot(res$re, aes(x = `est.`, y = name)) + 
+  geom_pointrange(aes(xmin = lower, xmax = upper )) +
+  xlab("Estimate") + ylab("")
+
+```
+
+
+```{r, eval =F}
 
 #
-
+# scale to 1
 # > print(lme1$modelStruct$reStruct)
 # Random effects:
 #  Formula: ~1 | ID
@@ -327,7 +292,35 @@ lme1$modelStruct$reStruct
 #         (Intercept) Residual
 # StdDev:    1.588816        1
 
-# from lme print
+
+# unconstrained: 	
+# a logical value. If TRUE the coefficients are returned in unconstrained form (the same used in the optimization algorithm). If FALSE the coefficients are returned in "natural", possibly constrained, form. Defaults to TRUE.
+
+
+# in unconstrained form (the same used in the optimization algorithm).
+#  >  coef(lme1$modelStruct, unconstrained = T)
+# reStruct.id3  reStruct.ID    corStruct 
+unc <- c(  0.4629889,    0.2801560  ,  0.2113650 )
+
+
+unc[1] / unc[2]
+#  cor
+unc1 <- unc[3]
+ aux <- exp(unc[3])
+(aux - 1) / (aux + 1)
+
+
+# coefficients are returned in "natural", possibly constrained, form.
+ # > coef(lme1$modelStruct, unconstrained = F)
+ # reStruct.id3.var((Intercept))  reStruct.ID.var((Intercept))                 corStruct.Phi 
+ #                    2.5243354                     1.7512190                     0.1052908 
+ # 
+scales <- sqrt(c(   2.5243354        ,             1.7512190  ))
+scales
+scales[c(1, 2)] * lme1$sigma
+
+print(lme1)
+
 # Random effects:
 #  Formula: ~1 | ID
 #         (Intercept)
@@ -336,23 +329,6 @@ lme1$modelStruct$reStruct
 #  Formula: ~1 | id3 %in% ID
 #         (Intercept)  Residual
 # StdDev:   0.6257585 0.3938522
-
-
-
-
-
-
-
-# WHAT IS THIS?
- # > print(lme1$modelStruct)
-# reStruct  parameters:
-#       id3        ID 
-# 0.4629889 0.2801560 
-# corStruct  parameters:
-# [1] 0.211365
-# 
-# sqrt(0.2801560 )
-# sqrt(0.4629889)
 ```
 
 
@@ -376,6 +352,9 @@ lme1$modelStruct$reStruct
 # lme2$coef$random$date_local %>% sd()
 # lme3$coef$random$group %>% sd()
 
+# 
+# lme1$coef$random$id3 %>% sd()
+# lme1$coef$random$ID %>% sd()
 ```         
     
 
