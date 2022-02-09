@@ -271,7 +271,7 @@ LME components
 
 ```{r}
 
-ggplot(res$re, aes(x = `est.`, y = name)) + 
+ggplot(res$re, aes(x = est, y = name)) + 
   geom_pointrange(aes(xmin = lower, xmax = upper )) +
   xlab("Estimate") + ylab("")
 

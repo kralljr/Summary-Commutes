@@ -17,6 +17,12 @@ get_lme <- function(data1, iqrs, eqn1, re = "~1 | ID / id3", intervals = T) {
   # format
   t1 <- tidy(lme1, conf.int = T) %>%
     filter(effect == "fixed", term != "(Intercept)") %>%
+    mutate(term = case_when(term == "snowbinL1m" ~ "snowbin",
+                            term == "awndL1" ~ "awnd",
+                            term == "tmaxL1" ~ "tmax",
+                            term == "tminL1" ~ "tmin",
+                            term == "prcpbinL1" ~ "prcpbin",
+                            TRUE ~ term)) %>%
     full_join(iqrs) %>%
     mutate(IQR = ifelse(is.na(IQR), 1, IQR),
            estimateIQR = estimate * IQR,
@@ -29,9 +35,12 @@ get_lme <- function(data1, iqrs, eqn1, re = "~1 | ID / id3", intervals = T) {
                                      "Local conn", "Local", "Other",
                                      "Max Temp",  "Min Temp", "Precipitation","Snow",
                                      "Wind", "WindDir SE", "WindDir Other")),
-           type = ifelse(term %in% c("daily", "obsdiff", "srness",   "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "timemin"),
+           type = ifelse(term %in% c("daily", "obsdiff", "srness",
+                                     "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "timemin"),
                          "Pollution", "Meteorology"),
-           type2 = ifelse(term %in% c("prcpbin", "snowbin",  "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "cat5smSE",
+           type2 = ifelse(term %in% c("prcpbin", "snowbin",
+                                      "rtypeLocalConn",  "rtypeLocal",
+                                      "rtypeOther", "cat5smSE",
                                       "cat5smOther"), "cat", "num"))
 
 
@@ -43,9 +52,9 @@ get_lme <- function(data1, iqrs, eqn1, re = "~1 | ID / id3", intervals = T) {
 
 
     # bind together intervals
-    re <- bind_rows(int1$sigma, reint[[1]])
+    re <- bind_rows(int1$sigma, reint[[1]][1, ])
     for(i in 2 : length(reint)) {
-      re <- bind_rows(re, reint[[i]])
+      re <- bind_rows(re, reint[[i]][1, ])
     }
     re <- mutate(re, name = c("sigma", names(reint))) %>%
       rename(est= `est.`)
@@ -96,7 +105,8 @@ plot_cat <- function(res) {
 
   cols <- brewer.pal(8, "Dark2")
   g1 <- ggplot(cat, aes(y = term1, x = estimate)) +
-    geom_pointrange(aes(xmin = conf.low, xmax = conf.high, colour = term2),
+    geom_pointrange(aes(xmin = conf.low, xmax = conf.high,
+                        colour = term2),
                     position = position_dodge(0.2)) +
     scale_colour_manual(values = cols,  guide = "none") +
     geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
@@ -170,12 +180,15 @@ plot_catALL <- function(t1) {
 
   cols <- brewer.pal(8, "Dark2")
   g1 <- ggplot(cat, aes(y = term1, x = estimate)) +
-    geom_pointrange(aes(xmin = conf.low, xmax = conf.high, colour= model), position = position_dodge(0.1)) +
+    geom_pointrange(aes(xmin = conf.low, xmax = conf.high,
+                        colour= model), position = position_dodge(0.4)) +
     geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
+    scale_color_manual(values = cols, name = "Model") +
     xlab("") +
     ylab(expression(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ") compared to reference"))) +
     theme_bw() +
-    theme(text = element_text(size = 12)) + facet_wrap(~type2, scales = "free_y", ncol = 1)
+    theme(text = element_text(size = 12), legend.position = "top") +
+    facet_wrap(~type2, scales = "free", ncol = 2, dir = "h")
 
   g1
 
@@ -191,7 +204,7 @@ plot_nocat <- function(res) {
     xlab("") +
     ylab(expression(atop(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ")" ), " per IQR increase"))) +
     theme_bw() +
-    theme(text = element_text(size = 24))
+    theme(text = element_text(size = 12))
 
   g2
 
@@ -202,14 +215,18 @@ plot_nocat <- function(res) {
 
 
 plot_nocatALL <- function(t1) {
+  cols <- brewer.pal(8, "Dark2")
 
   g2 <- ggplot(filter(t1, type2 != "cat"), aes(y = term1, x = estimateIQR)) +
-    geom_pointrange(aes(xmin = conf.lowIQR, xmax = conf.highIQR, colour= model), position = position_dodge(0.1)) +
+    geom_pointrange(aes(xmin = conf.lowIQR, xmax = conf.highIQR, colour= model),
+                    position = position_dodge(0.4)) +
+    scale_color_manual(values = cols, name = "Model") +
     geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
     xlab("") +
     ylab(expression(atop(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ")" ), " per IQR increase"))) +
     theme_bw() +
-    theme(text = element_text(size = 24))
+    theme(text = element_text(size = 12), legend.position = "top") +
+    facet_wrap(~term1, scales = "free",ncol = 2)
 
   g2
 

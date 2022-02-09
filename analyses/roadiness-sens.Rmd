@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = T)
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
 ```
 
 ```{r}
@@ -40,6 +40,13 @@ load(here("results/main-res.RData"))
 base <- res
 ```
 
+
+
+```{r fixbase}
+base$t1 <- mutate(base$t1, model = "Main")
+base$re <- mutate(base$re, model = "Main")
+
+```
 # Sensitivity analysis
 
 ```{r adjust}
@@ -74,7 +81,7 @@ rcommlag <- dplyr::select(rcomm, srness, rtype, id3, PM, daily,
 
 
 
-```{r}
+```{r, eval = F}
 baseeqn <- "lPM ~ srness + daily + obsdiff + awnd + prcpbin + 
                tmax + snowbin + tmin + rtype + 
                cat5sm"
@@ -91,14 +98,16 @@ eqn3 <- "lPM ~ srness + daily + obsdiff + awnd + prcpbin +
                tmax + snowbin + tmin + rtype + 
                cat5sm + timemin"
 
-names <- c("lead snow", "lag meteorol", "timemin", "day-level group", "rand slope")
+names <- c("Lead snow", "Lag met", "Trip time", "Day corr", "Random slope")
 eqns <- c(eqn1, eqn2, eqn3, rep(baseeqn, 2))
 randeff <- c(rep("~ 1| ID / id3", 3), "~ 1 | ID / group / id3", "~ timemin | ID / id3")
 ints <- c(T, T, T, F, T)
+int1 <- list()
 
-for(i in 1 : 4) {
+
+for(i in 1 : length(eqns)) {
   print(names[i])
-  if(names[i] %in% c("lead snow", "lag meteorol")) {
+  if(names[i] %in% c("Lead snow", "Lag met")) {
     data1 <- rcommlag
   } else {
     data1 <- rcomm1
@@ -111,7 +120,13 @@ for(i in 1 : 4) {
   res <- get_lme(data1, iqrs, eqns[i], re = randeff[i], intervals = ints[i]) 
   t1 <- mutate(res$t1, model = names[i])
   re <- mutate(res$re, model = names[i])
-  if(i == 1) {
+
+  if(i %in% c(1, 2)) {
+    int1[[i]] <- intervals(res$lme1)$fixed
+  }
+  
+  
+  if(i == 1 ) {
     resall <- full_join(base$t1, t1)
     varcomp <- full_join(base$re, re)
 
@@ -123,23 +138,45 @@ for(i in 1 : 4) {
 }
 
 
+# reorder
+resall <- mutate(resall, model = factor(model, levels = c("Main", names)))
+varcomp <- mutate(varcomp, model = factor(model, levels = c("Main", names)))
+
+ints1 <- rbind(int1[[1]]["tmax", ], int1[[2]]["tmaxL1", ])
+ints1[, 3] - ints1[, 1]
 
 save(resall, varcomp, file = here("results/sens.RData"))
 ```
 
 
 
+
+
+
+
 ## Plot
 
-
-
 ```{r}
+# load sens results
+load(here("results/sens.RData"))
+
+resall <- filter(resall, model != "Day corr")
+
+
+```
+
+
+# Figure SX. Sensitivity analyses for categorical covariates
+
+```{r, fig.height = 10}
 plot_catALL(resall)
 ```
 
 
+# Figure Sx. Sensitivity analyses for continuous covariates
 
-```{r}
+
+```{r, fig.height = 10}
 plot_nocatALL(resall)
 ```
 
@@ -150,13 +187,21 @@ plot_nocatALL(resall)
 
 ## Variance components
 
+**Note: group level produces no variability: remove (no intervals)**
 
+```{r, eval = T}
+cols <- brewer.pal(8, "Dark2")
 
-```{r, eval = F}
+varcomp <- filter(varcomp, model != "Day corr")
 
-ggplot(res$re, aes(x = `est.`, y = name)) + 
-  geom_pointrange(aes(xmin = lower, xmax = upper )) +
-  xlab("Estimate") + ylab("")
+ggplot(varcomp, aes(x = est, y = name)) + 
+  geom_pointrange(aes(xmin = lower, xmax = upper, colour = model), 
+                  position = position_dodge(0.4)) +
+  scale_color_manual(values = cols, name = "Model") +
+  xlab("Estimate") + ylab("") +
+  facet_wrap(~name, scales = "free") +
+  theme_bw() +
+  theme(legend.position = "top", text=  element_text(size = 12))
 
 ```
 
