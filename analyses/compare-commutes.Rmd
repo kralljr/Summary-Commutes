@@ -516,5 +516,6 @@ filter(s1b, day1 > 5 | day2 > 5)
 
 
 ```{r}
-save(pairedpoint, file = here("data/commutecompare-res.RData"))
+comparepm <- ungroup(comparepm)
+save(pairedpoint, comparepm, file = here("data/commutecompare-res.RData"))
 ```

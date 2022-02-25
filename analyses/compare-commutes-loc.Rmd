@@ -1,0 +1,275 @@
+---
+title: "Untitled"
+author: "Jenna Krall"
+date: "2/23/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r}
+# libraries
+library(dplyr)
+
+library(tidyverse)
+library(knitr)
+library(here)
+library(ggthemes)
+library(RColorBrewer)
+library(forcats)
+library(lubridate)
+
+library( sf)
+library( data.table)
+library( viridis)
+# add here to fixfile path
+# need raster package
+library(raster)
+
+library(dplyr)
+
+```
+
+```{r}
+load(here("data/commutecompare-res.RData"))
+load(here("data/MainStates1.RData"))
+
+```
+
+
+
+```{r}
+#24
+locs <- dplyr::select(comparepm, ID, min, commute, date) %>% unique() %>%
+  group_by(ID, commute) %>% summarize(date = min(date)) %>% ungroup()
+
+firstcom1 <- left_join(locs, comparepm) %>%
+  arrange(ID, rdatetime) %>%
+  group_by(ID, commute, date) %>%
+  mutate(loc = 1, cs = cumsum(loc)) 
+
+firstcom <- firstcom1 %>%
+  ungroup() %>%
+  dplyr::select(ID, commute, Latitude, Longitude, cs) %>%
+  nest(locs = c(Latitude, Longitude, cs))
+  
+secondcom <- dplyr::select(comparepm, ID, min, commute, date) %>% unique() %>%
+  group_by(ID, commute) %>% summarize(date = max(date)) %>% ungroup() %>%
+  left_join(., comparepm) %>%
+  arrange(ID, rdatetime) %>%
+  dplyr::select(ID, rdatetime, commute, Latitude, Longitude, PM) %>%
+  nest(data = c(rdatetime, Latitude, Longitude))
+
+
+coms <- full_join(firstcom, secondcom)
+```
+
+```{r}
+distfun <- function(x, y) {
+  x <- as.matrix(x)
+  y <- as.matrix(y)
+  dists <- matrix(nrow = nrow(x), ncol= nrow(y))
+  for(i in 1 : nrow(y)) {
+     dists[, i] <- sqrt((x[, 1] - y[i, 1] )^2 + (x[, 2] - y[i, 2])^2)
+  }
+  
+  apply(dists, 1, which.min)
+}
+
+```
+
+
+
+```{r}
+for(i in 1 : nrow(coms)) {
+  dat1 <- coms$data[[i]]
+  loc1 <- coms$locs[[i]]
+  
+  d1 <- distfun(dat1[, c("Latitude", "Longitude")], loc1[, c("Latitude", "Longitude")])
+  coms$data[[i]] <- mutate(coms$data[[i]], cs = loc1$cs[d1])
+}
+```
+
+
+```{r}
+coms1 <- dplyr::select(coms, -locs) %>%
+  unnest(data) %>%
+  group_by(ID, commute) %>%
+  mutate(min = min(rdatetime, na.rm = T)) %>%
+  ungroup() %>%
+  full_join(firstcom1) %>%
+  group_by(ID, commute) %>%
+  mutate(min2 = min(min, na.rm = T),
+         min2 = ifelse(min2 == min, "first", "second"),
+         maxcs = max(cs,na.rm = T), cs1 = 100 *(cs / maxcs) ) %>%
+  ungroup()
+
+
+coms1 <- dplyr::select(coms1, ID, commute, rdatetime, min, min2, cs, maxcs, cs1,
+                       Latitude, Longitude, PM)
+```
+
+
+
+
+
+
+```{r}
+g2 <- function(dat) {
+  xs <- c(min(dat$Longitude), max(dat$Longitude))
+  ys <- c(min(dat$Latitude), max(dat$Latitude))
+  ggplot() +
+  # geom_polygon( data=MainStates1, aes(x=long, y=lat, group = group),
+  #               color="grey50",fill = "white") +
+  geom_point(data = dat, aes(x = Longitude, y = Latitude, shape = min2, colour = cs1), alpha = 0.2) +
+    #scale_color_manual(values = cols) + 
+    xlim(xs) + ylim(ys) +
+  theme(legend.position = "none") +
+  xlab("Longitude") + ylab("Latitude") + theme_bw()
+}
+```
+
+
+```{r, fig.width = 10, fig.height = 10}
+g2(coms1) + facet_wrap(commute~ID)
+```
+
+
+
+```{r, fig.width = 10, fig.height = 10}
+firstagain <- dplyr::select(coms1, PM, commute, ID, rdatetime, min2) %>%
+  filter(min2 == "first") %>%
+  unique() %>%
+  group_by(ID, commute) %>%
+  arrange(rdatetime) %>%
+  mutate(csun = 1, csun = cumsum(csun), maxcs1 = max(csun),
+         propcs = 100 * (csun / maxcs1)) %>%
+  ungroup()
+
+
+```
+
+```{r}
+# merge into all first
+firstagain1 <- dplyr::select(coms1, PM, commute, ID, rdatetime, min2, cs, maxcs, cs1) %>%
+  filter(min2 == "first")
+```
+
+
+```{r}
+
+# new cs
+newcs <- full_join(firstagain, firstagain1) %>%
+  dplyr::select(propcs, cs, commute, ID) %>%
+  unique()
+
+```
+
+```{r}
+coms2 <- dplyr::select(coms1, cs, PM, commute, ID, rdatetime, min2) %>% 
+  full_join(newcs) %>%
+  dplyr::select(-cs) %>%
+  unique()
+
+save(coms2, file = here("data/commute-loc.RData"))
+
+```
+
+
+```{r, fig.width = 10, fig.height = 10}
+
+ggplot(coms2, aes(x = propcs, y = PM, colour = min2)) + geom_point() +
+  facet_wrap(commute ~ ID) + 
+  xlab("Proportion of commute by location")
+
+```
+
+# Adjust for ambient PM
+
+```{r}
+# daily hourly
+
+dayh <- ungroup(comparepm) %>% dplyr::select(rdatetime, daily, obsdiff) %>% unique()
+
+
+firstpm <- coms2 %>%
+  group_by(ID, commute, min2) %>%
+  mutate(mintime = min(rdatetime)) %>%
+  filter(rdatetime == mintime) %>% 
+  ungroup() %>%
+  rename(firstPM = PM) %>%
+  dplyr::select(-c(mintime, rdatetime, propcs))
+
+coms3 <- full_join(coms2, dayh) %>%
+    full_join(firstpm) %>%
+  mutate(PMdaily = PM - daily, PMhour = PM + obsdiff, 
+         PMdh = PM - daily + obsdiff, diff0pm = PM - firstPM)
+
+
+
+
+```
+
+## Adjust daily only
+
+```{r}
+
+
+ggplot(coms3, aes(x = propcs, y = PMdaily, colour = min2)) + geom_point() +
+  facet_wrap(commute ~ ID) + 
+  xlab("Proportion of commute by location") + 
+  ylab("PM adjusted for day")
+
+
+```
+
+## Adjust hourly only
+
+```{r}
+
+
+ggplot(coms3, aes(x = propcs, y = PMhour, colour = min2)) + geom_point() +
+  facet_wrap(commute ~ ID) + 
+  xlab("Proportion of commute by location") +
+  ylab("PM adjusted for hour")
+
+
+```
+
+
+## Adjust daily and hourly 
+
+```{r}
+
+
+ggplot(coms3, aes(x = propcs, y = PMdh, colour = min2)) + geom_point() +
+  facet_wrap(commute ~ ID) + 
+  xlab("Proportion of commute by location") +
+  ylab("PM adjusted for hour and day")
+
+
+```
+
+
+
+## Adjust initial PM
+
+```{r}
+
+
+ggplot(coms3, aes(x = propcs, y = diff0pm, colour = min2)) + geom_point() +
+  facet_wrap(commute ~ ID) + 
+  xlab("Proportion of commute by location") +
+  ylab("Deviation from starting PM")
+
+
+```
+
+
+
+```{r}
+
+
+```

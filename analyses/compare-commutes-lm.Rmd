@@ -1,0 +1,79 @@
+---
+title: "compare-commmutes-lm"
+author: "Jenna Krall"
+date: "2/25/2022"
+output: html_document
+---
+
+
+---
+title: "Untitled"
+author: "Jenna Krall"
+date: "2/23/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r}
+# libraries
+library(dplyr)
+
+library(tidyverse)
+library(knitr)
+library(here)
+library(ggthemes)
+library(RColorBrewer)
+library(forcats)
+library(lubridate)
+
+library( sf)
+library( data.table)
+library( viridis)
+# add here to fixfile path
+# need raster package
+library(raster)
+
+library(dplyr)
+
+```
+
+```{r}
+load(here("data/commutecompare-res.RData"))
+load(here("data/rcomm2.RData"))
+load(here("data/iqrs.RData"))
+load(here("data/commute-loc.RData"))
+
+
+# get functions for models
+source(here("functions/model-funs.R"))
+```
+
+
+
+```{r}
+weath <- dplyr::select(rcomm2, date_local, awndL1, prcpL1, snowL1m, tmaxL1, tminL1, cat5sm) %>% unique()
+
+coms2 <- dplyr::select(coms2, -PM)
+comparepm1 <- left_join(comparepm, weath) %>%
+  full_join(coms2)
+
+
+anti1 <- anti_join(coms2, comparepm)
+```
+
+- Length of commutes
+- Spatial variation is not important?
+
+```{r}
+
+eqn1 <- "lPM ~  daily + obsdiff + awnd + prcpbin + 
+               tmax  + tmin + rtype + 
+               cat5sm + snowbin"
+res <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / ") 
+
+get_lme(comparepm, iqrs, eqn1)
+
+```
