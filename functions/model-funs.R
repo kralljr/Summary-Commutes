@@ -1,11 +1,14 @@
 
 
-get_lme <- function(data1, iqrs, eqn1, re = "~1 | ID / id3", intervals = T) {
+get_lme <- function(data1, iqrs, eqn1, re = "~1 | ID / id3", intervals = T, corr = T) {
 
   # get correlation
-  cs1 <- corAR1(form = formula(re))
-  cs1 <- Initialize(cs1, data = data1)
-
+  if(corr) {
+    cs1 <- corAR1(form = formula(re))
+    cs1 <- Initialize(cs1, data = data1)
+  } else {
+    cs1 <- NULL
+  }
   # Fit model
   lme1 <- lme(formula(eqn1),
               random= formula(re),
@@ -30,11 +33,12 @@ get_lme <- function(data1, iqrs, eqn1, re = "~1 | ID / id3", intervals = T) {
            conf.highIQR = conf.high * IQR,
            term1 = factor(term, levels = c("daily", "obsdiff", "srness", "timemin",
                                            "rtypeLocalConn",  "rtypeLocal",    "rtypeOther",
-                                           "tmax" ,"tmin",  "prcpbin", "snowbin" , "awnd", "cat5smSE", "cat5smOther"),
+                                           "tmax" ,"tmin",  "prcpbin", "snowbin" , "awnd", "cat5smSE", "cat5smOther",
+                                           "hourly", "hourlymonth"),
                           labels = c("Daily PM2.5", "Hourly PM2.5", "Roadiness", "Time since start",
                                      "Local conn", "Local", "Other",
                                      "Max Temp",  "Min Temp", "Precipitation","Snow",
-                                     "Wind", "WindDir SE", "WindDir Other")),
+                                     "Wind", "WindDir SE", "WindDir Other", "Hour Mean", "Hour Mon Mean")),
            type = ifelse(term %in% c("daily", "obsdiff", "srness",
                                      "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "timemin"),
                          "Pollution", "Meteorology"),
@@ -178,7 +182,7 @@ plot_catALL <- function(t1) {
                                  ifelse(term == "rtypeOther", 4, 1))), term2 = factor(term2),
            type2 = factor(type2, levels = c("Precipitation", "Snow", "Wind direction", "Road type")))
 
-  cols <- brewer.pal(8, "Dark2")
+  cols <- rep(brewer.pal(8, "Dark2"), 2)
   g1 <- ggplot(cat, aes(y = term1, x = estimate)) +
     geom_pointrange(aes(xmin = conf.low, xmax = conf.high,
                         colour= model), position = position_dodge(0.4)) +
@@ -215,7 +219,7 @@ plot_nocat <- function(res) {
 
 
 plot_nocatALL <- function(t1) {
-  cols <- brewer.pal(8, "Dark2")
+  cols <- rep(brewer.pal(8, "Dark2"), 2)
 
   g2 <- ggplot(filter(t1, type2 != "cat"), aes(y = term1, x = estimateIQR)) +
     geom_pointrange(aes(xmin = conf.lowIQR, xmax = conf.highIQR, colour= model),

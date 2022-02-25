@@ -41,6 +41,12 @@ source(here("functions/model-funs.R"))
 
 Percent removed (1. <25, 2. missingness in model ocmponents)
 
+
+Meteorology:
+- Lag 1: max temp, min temp, wind speed, precipitation
+- Lead snow
+
+
 ```{r adjust}
 # Need to remove outliers?
 
@@ -50,13 +56,18 @@ rcomm <- filter(rcomm2, PM < 25)  %>% #, PM > 0)
   mutate(lPM = log(PM + shift),
     cat5sm = fct_relevel(cat5sm, "NW"))
 
+
 # ID 3 is date/commute
 rcomm1 <- dplyr::select(rcomm, srness, rtype, id3, PM, daily, 
-    obsdiff, ID,date_local, group, awnd , prcpbin , 
-    tmax, snowbin, tmin, cat5sm, timemin, lPM) %>% na.omit() 
+    obsdiff, ID,date_local, group, cat5sm, timemin, lPM,
+    awndL1 , prcpbinL1 , 
+    tmaxL1, tminL1, snowbinL1m )  %>% 
+   na.omit() %>%
+  rename(awnd = awndL1 , prcpbin= prcpbinL1 , 
+    tmax = tmaxL1, tmin = tminL1, snowbin= snowbinL1m )
 
-iqrs <- dplyr::select(rcomm1, -c(PM, lPM, ID, date_local, group,  
-                                prcpbin, snowbin, rtype, id3, cat5sm)) %>%
+iqrs <- dplyr::select(rcomm1, -any_of(c("PM", "lPM", "ID", "date_local",
+         "group",   "prcpbin", "snowbin", "rtype", "id3", "cat5sm"))) %>%
   pivot_longer(srness : tmin) %>%
   group_by(name)
 
@@ -189,8 +200,8 @@ rcomm1 <- group_by(rcomm1, ID, id3) %>%
 
 ```{r}
 eqn1 <- "lPM ~ srness + daily + obsdiff + awnd + prcpbin + 
-               tmax + snowbin + tmin + rtype + 
-               cat5sm"
+               tmax  + tmin + rtype + 
+               cat5sm + snowbin"
 res <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3") 
 
 # Get residuals
@@ -241,9 +252,9 @@ ggplot(long, aes(x = value, y = .resid)) +
   geom_point() +
   facet_wrap(~name, scales = "free")
 
-long <- mutate(lme1b, snowbin = factor(snowbin),
+long <- mutate(lme1b, #snowbin = factor(snowbin),
                prcpbin = factor(prcpbin)) %>%
-  pivot_longer(c(snowbin, prcpbin, cat5sm, rtype)) 
+  pivot_longer(c(prcpbin, cat5sm, rtype)) #snowbin, 
 ggplot(long, aes(x = value, y = .resid)) +
   geom_boxplot() +
   facet_wrap(~name, scales = "free")

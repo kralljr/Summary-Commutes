@@ -21,6 +21,7 @@ library(nlme)
 library(forcats)
 library(patchwork)
 library(RColorBrewer)
+library(splines)
 # library(lmeInfo)
 
 ```
@@ -75,49 +76,68 @@ rcommlag <- dplyr::select(rcomm, srness, rtype, id3, PM, daily,
     # lag precip, temp, wind
     prcpbinL1, tmaxL1, tminL1, awndL1, 
     # lead snow
-    snowbinL1m) %>% na.omit()
+    snowbinL1m,
+    # hour mean, hour month mean
+    hourly, hourlymonth) %>% na.omit()
 ```
 
 
 
 
 ```{r, eval = F}
-baseeqn <- "lPM ~ srness + daily + obsdiff + awnd + prcpbin + 
-               tmax + snowbin + tmin + rtype + 
+baseqn <- "lPM ~ srness + daily + obsdiff + awndL1 + prcpbinL1 + 
+               tmaxL1 + tminL1 + rtype + 
+               cat5sm + snowbinL1m"
+
+eqn1 <- "lPM ~ srness + daily + obsdiff + awndL1 + prcpbinL1 + 
+               tmaxL1 + tminL1 + rtype +
                cat5sm"
 
-eqn1 <- "lPM ~ srness + daily + obsdiff + awnd + prcpbin + 
-               tmax + snowbinL1m + tmin + rtype + 
+eqn2 <- "lPM ~ srness + daily + obsdiff + awnd + prcpbin + 
+               tmax + tmin + rtype +  snowbinL1m +
                cat5sm"
 
-eqn2 <- "lPM ~ srness + daily + obsdiff + awndL1 + prcpbinL1 + 
-               tmaxL1 + snowbin + tminL1 + rtype + 
-               cat5sm"
+eqn3 <-  "lPM ~ srness + daily + obsdiff + awndL1 + prcpbinL1 + 
+               tmaxL1 + tminL1 + rtype + 
+               cat5sm + snowbinL1m + timemin"
 
-eqn3 <- "lPM ~ srness + daily + obsdiff + awnd + prcpbin + 
-               tmax + snowbin + tmin + rtype + 
-               cat5sm + timemin"
 
-names <- c("Lead snow", "Lag met", "Trip time", "Day corr", "Random slope")
-eqns <- c(eqn1, eqn2, eqn3, rep(baseeqn, 2))
-randeff <- c(rep("~ 1| ID / id3", 3), "~ 1 | ID / group / id3", "~ timemin | ID / id3")
-ints <- c(T, T, T, F, T)
+eqn4 <- "lPM ~ srness + daily + obsdiff + awndL1 + prcpbinL1 + 
+               tmaxL1 + tminL1 + rtype + snowbinL1m +
+               cat5sm + hourly"
+
+eqn5 <- "lPM ~ srness + daily + obsdiff + awndL1 + prcpbinL1 + 
+               tmaxL1 + tminL1 + rtype + snowbinL1m +
+               cat5sm + hourlymonth"
+
+
+
+eqn5 <- "lPM ~ srness + daily + obsdiff + awndL1 + prcpbinL1 + 
+               tmaxL1 + tminL1 + rtype + snowbinL1m +
+               cat5sm + ns(timemin, 3)"
+
+names <- c("No snow", "Same day met", "Trip time", "Day corr", "Random slope", "No autocor", "Hour mean", "Hour month mean", "Spline time")
+eqns <- c(eqn1, eqn2, eqn3, rep(baseeqn, 3), eqn4, eqn5, eqn6)
+randeff <- c(rep("~ 1| ID / id3", 3), "~ 1 | ID / group / id3", 
+             "~ timemin | ID / id3", rep("~ 1| ID / id3", 4))
+ints <- c(T, T, T, F, T, T, T, T, T)
+cors <- c(T, T, T, T, T, F, T, T, T)
 int1 <- list()
 
-
+data1 <- rcommlag
 for(i in 1 : length(eqns)) {
   print(names[i])
-  if(names[i] %in% c("Lead snow", "Lag met")) {
-    data1 <- rcommlag
-  } else {
-    data1 <- rcomm1
-  }
+  # if(names[i] %in% c("Lead snow", "Same day met")) {
+  #   data1 <- rcommlag
+  # } else {
+  #   data1 <- rcomm1
+  # }
 #     lower  est. upper name 
 # * <dbl> <dbl> <dbl> <chr>
 # 1 0.404 0.423 0.442 sigma
 # 2 0.332 0.578 1.01  ID   
 # 3 0.491 0.626 0.797 id3  
-  res <- get_lme(data1, iqrs, eqns[i], re = randeff[i], intervals = ints[i]) 
+  res <- get_lme(data1, iqrs, eqns[i], re = randeff[i], intervals = ints[i], corr = cors[i]) 
   t1 <- mutate(res$t1, model = names[i])
   re <- mutate(res$re, model = names[i])
 
@@ -142,8 +162,6 @@ for(i in 1 : length(eqns)) {
 resall <- mutate(resall, model = factor(model, levels = c("Main", names)))
 varcomp <- mutate(varcomp, model = factor(model, levels = c("Main", names)))
 
-ints1 <- rbind(int1[[1]]["tmax", ], int1[[2]]["tmaxL1", ])
-ints1[, 3] - ints1[, 1]
 
 save(resall, varcomp, file = here("results/sens.RData"))
 ```
@@ -160,7 +178,7 @@ save(resall, varcomp, file = here("results/sens.RData"))
 # load sens results
 load(here("results/sens.RData"))
 
-resall <- filter(resall, model != "Day corr")
+# resall <- filter(resall, model != "Day corr")
 
 
 ```
@@ -190,7 +208,7 @@ plot_nocatALL(resall)
 **Note: group level produces no variability: remove (no intervals)**
 
 ```{r, eval = T}
-cols <- brewer.pal(8, "Dark2")
+cols <- rep(brewer.pal(8, "Dark2"), 2)
 
 varcomp <- filter(varcomp, model != "Day corr")
 
