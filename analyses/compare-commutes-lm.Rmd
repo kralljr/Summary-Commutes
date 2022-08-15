@@ -6,12 +6,6 @@ output: html_document
 ---
 
 
----
-title: "Untitled"
-author: "Jenna Krall"
-date: "2/23/2022"
-output: html_document
----
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = F, warning = F, message = F)
@@ -37,6 +31,7 @@ library( viridis)
 library(raster)
 
 library(dplyr)
+library(nlme)
 
 ```
 
@@ -72,7 +67,7 @@ anti1 <- anti_join(coms2, comparepm)
 eqn1 <- "lPM ~  daily + obsdiff + awnd + prcpbin + 
                tmax  + tmin + rtype + 
                cat5sm + snowbin"
-res <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / ") 
+res <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID ") 
 
 get_lme(comparepm, iqrs, eqn1)
 
