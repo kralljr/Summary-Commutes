@@ -1,0 +1,116 @@
+---
+title: 'Variability in PM2.5 exposures during daily commutes'
+subtitle: "Miscellany"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(knitr)
+library(here)
+library(ggthemes)
+library(DescTools)
+library(RColorBrewer)
+library(forcats)
+library(lubridate)
+library(patchwork)
+
+# from roadiness-eda.Rmd
+load(here("figures/eda-tabfig.RData"))
+# from figure2.R
+load(here("figures/fighourly.RData"))
+
+
+# supplement from roadiness-eda.Rmd
+load(here("results/supp-plots.RData"))
+```
+
+
+```{r}
+rcomm1 <- boxplot1[[2]]
+ns <- boxplot1[[3]]
+
+dates <- select(rcomm1, date) %>% unique() %>% rename(date_local = date)
+obsdiff <- fighourly[[2]]
+obsdiff <- left_join(dates, obsdiff)
+
+datecom <- dplyr::select(rcomm1, date, ID) %>% unique()
+```
+
+# Number of observations
+
+- Number of trips `r nrow(rcomm1)`
+- Number of days `r length(unique(rcomm1$date))`
+- Number of commuter-days `r nrow(datecom)`
+- Number of commuters `r length(unique(datecom$ID))`
+
+# Demographics
+
+See roadiness-eda.Rmd
+
+# Number of observations by season
+
+```{r}
+# number/prop by season
+
+select(obsdiff, date_local, cold) %>% unique() %>% count(cold) %>%
+  mutate(prop = n / sum(n)) %>%
+  kable(digits = 2)
+
+```
+
+
+# Wind speed
+
+```{r}
+winddirt
+
+```
+
+# Old plot code
+
+```{r, eval = F}
+# old
+dpm <- ggplot(va24, aes(y = daily)) +
+  geom_boxplot() +
+  ylab((expression(paste("ambient daily PM"[2.5], " (", mu, "g/m"^3, ")")))) +
+  #xlab("Date") +
+  theme_bw() +
+  theme(text = element_text(size = 12),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+
+
+
+fighourly <- ggplot() +
+  geom_boxplot(data = obsdiff, aes(x = factor(time_local), y = obsdiff)) +
+  ylab(expression(paste("Change in PM"[2.5], " (", mu, "g/m"^3, ")"))) +#, #"\nrelative to daily average"))) +
+  xlab("Hour of day") +
+  theme_bw() +
+  theme(text = element_text(size = 12))
+
+dpm + fighourly + plot_layout(widths = c(1, 5))
+```
+
+
+```{r, eval = F}
+#Trends in ambient hourly PM$_{2.5}$ (difference in $\mu$g/m$^3$, change relative to daily mean) by hour of the day and by season for each unique day of observation (N=38)**
+fighourly <- ggplot() +
+  geom_line(data = obsdiff, aes(x = time_local, y = obsdiff, group = date_local), linetype = 1, alpha = 0.3) +
+    geom_smooth(data = obsdiff, aes(x = time_local, y = obsdiff), linetype = 2, 
+                se = T, colour = cols[2], fill = cols[2]) +
+  # scale_color_manual(name = "Season", values = cols) +
+  # scale_alpha_manual(name = "Season", values = alps) +
+  # scale_color_gradient2(name = "Month", labels = lab1, breaks = c(-4,0, 4 ),
+  #                       low = "orange", mid = "blue", high = "green")+
+  ylab(expression(paste("Change in PM"[2.5], " (", mu, "g/m"^3, ")"))) +#, #"\nrelative to daily average"))) +
+  xlab("Hour of day") +
+  theme_bw() +
+  theme(text = element_text(size = 12))
+fighourly
+```

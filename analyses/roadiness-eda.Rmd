@@ -363,10 +363,20 @@ ggplot(weather, aes(x = value)) +geom_histogram(bins = 10) +
 *Snow and precipation: binary*
 
 ```{r}
-select(weather1, date_local, ID, contains("snowbin"), contains("prcpbin"), -windsnow) %>%
+snowptab <- select(weather1, date_local, ID, contains("snowbin"), contains("prcpbin"), -windsnow) %>%
   pivot_longer(-c("ID", "date_local")) %>%
   group_by(name) %>%
-  count(value) %>% mutate(perc = round(100* n/sum(n), 1)) %>% kable()
+  count(value) %>% mutate(perc = round(100* n/sum(n), 1),
+                          NPerc = paste0(n, " (", perc, ")"),
+                          value = ifelse(value== 0, "None", "Some"),
+                          name = case_when(name == "snowbin"~ "Snow",
+                                           name == "prcpbin" ~ "Precipitation")) %>%
+  dplyr::select(name, value, NPerc) %>%
+  dplyr::filter(name %in% c("Snow", "Precipitation")) %>%
+  rename(Variable = name, Value = value)
+
+snowptab%>%
+  kable()
 ```
 
 
@@ -383,9 +393,20 @@ weatherb <- weather1b %>%
                         "snowbin", "snowbinL1", "snowbinL1m",
                        "prcpbin", "prcpbinL1", "prcpbinL1m")))
   
-group_by(weatherb, name) %>% summarize(mean = mean(value), sd = sd(value), 
-                min= min(value), max = max(value)) %>%
+contweat <- group_by(weatherb, name) %>% summarize(mean = mean(value), sd = sd(value), 
+                min= min(value), max = max(value))
+contweat%>%
   kable(digits = 2)
+
+
+contweat1 <- dplyr::filter(contweat, name %in% c("awnd", "tmax", "tmin")) %>%
+  mutate(name = case_when(name == "awnd"~ "Wind speed (m/s)",
+                          name == "tmax" ~ "Maximum temp (C)",
+                          name == "tmin" ~ "Minimum temp (C)"),
+         mean = round(mean, 1), sd = round(sd, 1),
+         MeanSD = paste0(mean, " (", sd, ")")) %>%
+  dplyr::select(name, MeanSD) %>%
+  rename(Variable = name)
 
 ggplot(weatherb, aes(x = value)) +geom_histogram(bins = 10) + 
   facet_wrap(~name, scales = "free")
@@ -414,13 +435,21 @@ ggplot(winddir, aes(x = cat2sm)) + geom_bar()
 
 - Wind dir: 5
 ```{r}
-count(winddir, cat5sm) %>% mutate(perc = round(100 * n / sum(n), 1)) %>% kable()
+winddirt <- count(winddir, cat5sm) %>% mutate(perc = round(100 * n / sum(n), 1), NPerc =paste0(n, " (", perc, ")")) %>%
+  dplyr::select(cat5sm, NPerc) %>%
+  rename(Value = cat5sm) %>%
+  mutate(Variable = "Wind direction")
+
+catweath <- bind_rows(snowptab, winddirt)
+
+
 
 ```
 
 ```{r}
 datdir <- rename(winddir, dir = wdf5)
-plot.windrose(datdir)
+winddir1 <- plot.windrose(datdir)
+winddir1 
 ```
 
 
@@ -493,7 +522,7 @@ summarize(va24, mean(daily), sd(daily), min(daily), max(daily))
 # Participant characteristics
 
 
-```{r, eval = F}
+```{r, eval = T}
 part <- select(rcomm, ID) %>% unique() %>%
   mutate(id = tolower(ID))
 load("~/Documents/gestdc-data/gestdc-merged.RData")
@@ -501,24 +530,45 @@ load("~/Documents/gestdc-data/gestdc-merged.RData")
 dat <- select(dat, id, age : numchildren)
 
 dat1 <- left_join(part, dat) %>%
-  mutate(numchildren = factor(numchildren))
-
-summarize(dat, mean(age, na.rm = T), sd(age,na.rm = T), min(age,na.rm = T), max(age,na.rm = T))
+  mutate(Children = ifelse(numchildren == 0,
+                              "None", "1+"),
+         GMUstudent = ifelse(occupation == "George Mason Student", "Yes", "No"),
+         Race = ifelse(race == "White", "White only",
+                       ifelse(race %in% c("Asian", "White,Asian"), "Asian", "Other/Did not specify"))) %>%
+      #   Education = ifelse(Education)) %>%
+  rename(Ethnicity = ethnicity, Education = education, Employed = fulltime)
 
 summarize(dat1, mean(age), sd(age), min(age), max(age))
 
-select(dat1, id, marital, race, ethnicity, education, occupation, fulltime, numchildren) %>%
+ords <- c("Asian", "White only", "Other/Did not specify",
+          "Hispanic or Latino", "Not Hispanic or Latino",
+          "Part-time", "Full-time",
+          "High school diploma or GED",
+          "Some college or technical school",
+          "College degree or technical school degree",
+          "Some graduate school",
+          "Graduate school degree or post-graduate degree",
+          "Yes","No",  "None",  "1+")
+demo <- select(dat1, id, Race, Ethnicity, Education, GMUstudent, Employed, Children) %>%
   pivot_longer(-id) %>%
   na.omit() %>%
   group_by(name) %>%
   count(value) %>%
-  mutate(perc= 100 *n/25, perc = round(perc, 1)) %>% View()
-
+  mutate(perc= 100 *n/25, perc = round(perc, 1),
+         nperc = paste0(n, " (", perc, ")")) %>%
+  dplyr::select(name, value, nperc) %>%
+  rename(Variable = name, Value = value, NPerc = nperc) %>%
+  mutate(Value = factor(Value, levels = ords)) %>%
+  arrange(Value)
+kable(demo)
 # education
-(5 + 5 + 2 + 7) / 25
+# (5 + 5 + 2 + 7) / 25
 
 ```
 
 ```{r}
 save(boxplot1, roadtype1, tripplot, dailypm, file = here("figures/eda-tabfig.RData"))
+
+
+save(winddir1, catweath,contweat1,  demo, file = here("results/supp-plots.RData"))
 ```

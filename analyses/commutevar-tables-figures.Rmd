@@ -1,0 +1,107 @@
+---
+title: 'Variability in PM2.5 exposures during daily commutes'
+subtitle: "Tables and Figures"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(knitr)
+library(here)
+library(ggthemes)
+library(DescTools)
+library(RColorBrewer)
+library(forcats)
+library(lubridate)
+library(patchwork)
+
+# from roadiness-eda.Rmd
+load(here("figures/eda-tabfig.RData"))
+# from figure2.R
+load(here("figures/fighourly.RData"))
+
+```
+
+# EDA figures/tables
+
+```{r}
+k <- 1
+
+```
+
+
+# Table `r k`. Distributions of personal in-vehicle PM$_{2.5}$ exposures ($\mu$g/m$^3$) for each participant (N=25) on the natural log scale.
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+rcomm1 <- boxplot1[[2]]
+ns <- boxplot1[[3]]
+
+dates <- select(rcomm1, date) %>% unique() %>% rename(date_local = date)
+boxplot1 <- ggplot(rcomm1, aes(y = fct_reorder(ID, medl), x  = PM)) + geom_boxplot() +#outlier.shape = NA
+   ylab(expression(paste("Minutes observed per participant"))) +
+  xlab((expression(paste("PM"[2.5], " (", mu, "g/m"^3, ")")))) +
+  scale_x_continuous(trans = "log", breaks = c(0.5, 3, 20)) +
+  theme_bw() +
+  scale_y_discrete(breaks = ns$ID, labels = ns$n) +
+  theme(text = element_text(size = 12))
+boxplot1 
+
+```
+
+
+
+**Percentage of observations on each road type per participant (N=25)** 
+
+```{r}
+perc <- roadtype1[[2]]
+roadtype1 <- ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) + 
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "red", name = "Percent") +
+  xlab("") + ylab("Participant") +
+  theme(text = element_text(size=12), axis.text.y = element_blank())
+
+roadtype1
+
+```
+
+
+**For each observed trip (N=69), variation in road type and PM$_{2.5}$ over each trip.  PM$_{2.5}$ is shown as the difference in log $\mu$g/m$^3$ from the trip-specific mean to better visualize changes across each trip.**
+
+```{r}
+rcomm1 <- tripplot[[2]]
+```
+
+```{r}
+roadtype2 <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = rtype)) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since obs trip start") +
+  scale_fill_colorblind(name = "Road type") +
+ # theme_bw() +
+  theme(text = element_text(size=12), axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position  = c(.75, .25))
+
+pmtile <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = lPM2)) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since obs trip start") +
+  scale_fill_gradient2(name = "log PM2.5 difference", low = "green", high = "red",
+                       mid = "white") +
+  #theme_bw() +
+  theme(text = element_text(size=12), axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(), legend.position = c(.75, .25))
+
+tripplot <- roadtype2 + pmtile
+tripplot[[2]] = tripplot[[2]] + theme(axis.text.y = element_blank(),
+                                        axis.ticks.y = element_blank(),
+                                        axis.title.y = element_blank() )
+
+tripplot
+
+```
