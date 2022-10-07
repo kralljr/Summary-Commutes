@@ -68,4 +68,16 @@ points_gridcell <- points_gridcell[,-1]%>%
 points_gridcell <- points_gridcell%>%
                       relocate(c("Longitude", "Latitude"), c(1,2))
 
+# check
+s1 <- slice_sample(points_gridcell, n = 1000)
+ggplot(s1, aes(x = Longitude, y = Latitude, colour = leng.distm2_scale)) +
+  geom_point() +
+  xlim(-78, -77) + ylim(38.5, 39)
+
+ggplot(s1, aes(x  = leng.distm2_scale)) + geom_histogram()
+
 save(points_gridcell, file = here("data/points_gricell.Rdata"))
+
+
+
+
