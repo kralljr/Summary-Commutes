@@ -72,7 +72,8 @@ pm <- dplyr::select(datall, rdatetime, rtiPM25, ID) %>%
   unique()
 
 # check code below-- should be the same
-pm1 <- mutate(pm, date = date(rdatetime)) %>%
+pm1b <- mutate(pm, date = date(rdatetime))
+pm1 <- pm1b %>%
   filter(!is.na(PM), PM < 250) %>%
   group_by(ID, date) %>%
   arrange(ID, date, rdatetime) %>%
@@ -90,7 +91,7 @@ pm1 <- mutate(pm, date = date(rdatetime)) %>%
   ungroup()
 
 
-save(pm1, file =  here("data/pm-cleaned.RData"))
+save(pm1, pm1b, file =  here("data/pm-cleaned.RData"))
 
 #49
 # unique(pm$ID) %>% length()
