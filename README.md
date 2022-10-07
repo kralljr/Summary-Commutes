@@ -21,17 +21,17 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
 5. commutes_to_gridcell.R: File to align roadiness with lat/lon from commutes
 
     - Input: roadinessr.RData, unique_commutes_df
-    - Creates: points_gricell.Rdata: Roadiness for each lat/lon
+    - Creates: points_gricell.Rdata: Roadiness for each lat/lon (look at roadiness plots)
 
 6. find-roads.R: 
 
-    - Input: gpslatlon.RData (GPS GEST DC data to Lucas), Road types from Lucas: gps_road_assigned.csv
+    - Input: gpslatlon.RData (GPS GEST DC data to Lucas), Road types from Lucas: gps_road_assigned.csv.  Note: needed reduced lat/lon data for merge with rtypes (vs. roadiness grid cells)
     - Output: Revised complete GESTDC lat/lon latlon.RData, Road types: rtypes.RData
     
 7. roadiness_dataset.R: Merge with full GEST-DC commute dataset
 
     - Input: points_gricell.Rdata, pm-cont-data-1minrti.RData (RTI adjusted PM), rtypes.RData
-    - Creates: roadiness_commutes.Rdata (rtype is mode, rtype2 is mean), pm-cleaned.RData (pm data without GPS)
+    - Creates: roadiness_commutes.Rdata (labels rtypes.  rtype is mode, rtype2 is mean-- has PM + road info), pm-cleaned.RData (pm data without GPS)
     - Use to see number of participants N=25
     
 8. clean-va.R: File to get PM for daily VA, hourly avg
