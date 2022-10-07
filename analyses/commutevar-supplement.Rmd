@@ -22,6 +22,7 @@ library(forcats)
 library(lubridate)
 library(patchwork)
 
+
 # from roadiness-eda.Rmd
 load(here("figures/eda-tabfig.RData"))
 # from figure2.R
@@ -29,6 +30,10 @@ load(here("figures/fighourly.RData"))
 
 # supplement from roadiness-eda.Rmd
 load(here("results/supp-plots.RData"))
+
+
+# gps plot data
+load(here("results/gpsplotdata.RData"))
 
 ```
 
@@ -71,7 +76,7 @@ k <- k + 1
 ```
 
 ```{r}
-kable(contweat)
+kable(contweat1)
 ```
 
 # Figures
@@ -149,3 +154,76 @@ k <- k + 1
 winddir1
 ```
 
+
+
+## Figure `r k`. Percentage of observations on each road type per participant (N=25)
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+perc <- roadtype1[[2]]
+roadtype1 <- ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) + 
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "red", name = "Percent") +
+  xlab("") + ylab("Participant") +
+  theme(text = element_text(size=12), axis.text.y = element_blank())
+
+roadtype1
+
+```
+
+
+
+
+## Figure `r k`. GPS locations of all commutes (N=32).
+
+- Why only 32??
+```{r}
+k <- k + 1
+```
+
+```{r}
+createcap <- function(x) {
+  strsplit(x, " ") %>% 
+  lapply(., function(x) paste0(toupper(substr(x, 1, 1)), tolower(substring(x, 2)))) %>% 
+     sapply(., function(y) paste(y, collapse = " "))
+}
+
+sr1 <- createcap(labs1$subregion)
+
+labs1 <- dplyr::select(MainStates1, long, lat, region, subregion) %>%
+  group_by(region, subregion) %>% 
+  summarize(long = mean(long), lat = mean(lat))
+labs <- labs1 %>%
+  ungroup() %>%
+  mutate(
+         region = case_when(region == "district of columbia" ~"D.C.",
+                            region == "maryland" ~"MD",
+                            region == "virginia" ~ "VA"),
+         subregion = sr1,
+         subregion1 = paste0(subregion, ", ", region),
+         lat = ifelse(sr1 == "Loudoun", lat - 0.1,
+                         ifelse(sr1 == "Prince William", lat - .15,
+                                ifelse(sr1 == "Washington", lat + 0.05,
+                                       ifelse(sr1 == "Prince Georges",
+                                              lat -0.1, 
+                                              ifelse(sr1 == "Arlington",
+                                                     lat - 0.05, ifelse(sr1 == "Fairfax", lat + 0.05, lat)))))),
+         long = ifelse(sr1 == "Arlington", long + .25,
+                      ifelse( sr1 == "Fairfax", long - 0.42, 
+                              ifelse(sr1 == "Washington", long + 0.2, long))))
+g2 <- ggplot() +
+  xlim(c(-78, -76.5)) + 
+  geom_polygon( data=MainStates1, aes(x=long, y=lat, group = group),
+                color="grey70",fill = "white") +
+  geom_point(data = t1, aes(x = Longitude, y = Latitude), alpha = 0.05,
+             colour = "grey40") +
+  # scale_color_manual(values = cols) +
+  geom_text(data = labs, aes(x = long, y = lat, label = subregion1),
+                             colour = "blue") +
+  theme(legend.position = "none") +
+  xlab("Longitude") + ylab("Latitude") 
+g2
+```

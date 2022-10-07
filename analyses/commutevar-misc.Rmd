@@ -65,12 +65,6 @@ select(obsdiff, date_local, cold) %>% unique() %>% count(cold) %>%
 ```
 
 
-# Wind speed
-
-```{r}
-winddirt
-
-```
 
 # Old plot code
 
@@ -113,4 +107,31 @@ fighourly <- ggplot() +
   theme_bw() +
   theme(text = element_text(size = 12))
 fighourly
+```
+
+
+# commutes > 60
+
+
+```{r}
+load(here("data/rcomm2.RData"))
+filter(rcomm2, obs > 60) %>% dplyr::select(ID, date, cum1, obs) %>%
+  unique()
+
+```
+
+
+# make and model
+
+```{r}
+load("/Users/jenna/Documents/gestdc-data/gestdc-merged.RData")
+load(here("figures/eda-tabfig.RData"))
+rcomm1 <- boxplot1[[2]]
+ids <- rcomm1$ID %>% unique() %>% tolower()
+types <- c("small", "small", "crossover", "small", "crossover", "crossover")
+dplyr::select(dat, id, modelcar, makecar) %>%
+  dplyr::filter(modelcar != "" | makecar != "",
+                id %in% ids) %>% mutate(type = types) %>%kable()
+
+
 ```

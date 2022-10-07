@@ -1,7 +1,9 @@
 ---
 title: 'Variability in PM2.5 exposures during daily commutes'
-subtitle: "Tables and Figures"
-output: html_document
+subtitle: "Tables and figures"
+output: 
+  html_document:
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
@@ -27,15 +29,14 @@ load(here("figures/fighourly.RData"))
 
 ```
 
-# EDA figures/tables
-
+# Figures
 ```{r}
 k <- 1
 
 ```
 
 
-# Table `r k`. Distributions of personal in-vehicle PM$_{2.5}$ exposures ($\mu$g/m$^3$) for each participant (N=25) on the natural log scale.
+## Figure `r k`. Distributions of personal in-vehicle PM$_{2.5}$ exposures ($\mu$g/m$^3$) for each participant (N=25) on the natural log scale.
 
 ```{r}
 k <- k + 1
@@ -59,22 +60,15 @@ boxplot1
 
 
 
-**Percentage of observations on each road type per participant (N=25)** 
+
+
+
+## Figure `r k`. For each observed trip (N=69), variation in road type and PM$_{2.5}$ over each trip.  PM$_{2.5}$ is shown as the difference in log $\mu$g/m$^3$ from the trip-specific mean to better visualize changes across each trip.
 
 ```{r}
-perc <- roadtype1[[2]]
-roadtype1 <- ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) + 
-  geom_tile() +
-  scale_fill_gradient(low = "white", high = "red", name = "Percent") +
-  xlab("") + ylab("Participant") +
-  theme(text = element_text(size=12), axis.text.y = element_blank())
-
-roadtype1
-
+k <- k + 1
 ```
 
-
-**For each observed trip (N=69), variation in road type and PM$_{2.5}$ over each trip.  PM$_{2.5}$ is shown as the difference in log $\mu$g/m$^3$ from the trip-specific mean to better visualize changes across each trip.**
 
 ```{r}
 rcomm1 <- tripplot[[2]]

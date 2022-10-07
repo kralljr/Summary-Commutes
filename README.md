@@ -8,7 +8,7 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
     
     - Input: All GPS .csv files from the GEST-DC data loggers
     - Creates: gpslatlon.RData, one dataset of ID, time, latitude/longitude for each trip.
-2. check-commute-data.R: Check/analyze gpslatlon.RData.
+2. check-commute-data.R: Check/analyze gpslatlon.RData. (not useful for paper because not merged with PM2.5)
 3. unique_commutes_df.R: 
    
     - Input: gpslatlon.RData

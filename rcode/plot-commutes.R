@@ -6,10 +6,18 @@ library(here)
 library(RColorBrewer)
 
 # load data
+load(here("data/rcomm2.RData"))
+
+# load GPS
 load(here("data/tripdata.RData"))
 
 # remove PA
-tripdata1 <- filter(tripdata, ID != "GMU1026")
+tripdata1 <- filter(tripdata, ID != "GMU1026") %>%
+  mutate(hr = as.numeric(substr(trip_total_time, 1, 2)),
+         min = as.numeric(substr(trip_total_time, 4, 5)),
+         timetotal = hr * 60 + min) %>%
+  # need to merge wqith PM
+  dplyr::filter(timetotal >=15)
 loc <- tripdata1[, c("ID", "Longitude", "Latitude")] %>% as.data.frame()
 
 # plot(loc[, "Longitude"], loc[, "Latitude"])
@@ -53,5 +61,10 @@ g2 <- ggplot() +
   scale_color_manual(values = cols) +
   theme(legend.position = "none") +
   xlab("Longitude") + ylab("Latitude")
-ggsave(g2, file = here("plots/gestdc-commutes-ds.png"), width = 4, height = 4, units = "in")
+# ggsave(g2, file = here("plots/gestdc-commutes-ds.png"), width = 4, height = 4, units = "in")
 
+
+
+
+
+save(MainStates1, t1, file = here("results/gpsplotdata.RData"))
