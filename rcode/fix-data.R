@@ -132,15 +132,20 @@ rcomm2 <- group_by(rcomm2, ID, date_local, group) %>%
 # Format data for analysis
 shift <- 0.05 # smallest is 0.10
 rcomm <- mutate(rcomm2, lPM = log(PM + shift),
-                cat5sm = fct_relevel(cat5sm, "NW"))
+                cat5sm = fct_relevel(cat5sm, "NW"),
+                rtype = fct_relevel(rtype, "Local"))
 
 # ID 3 is date/commute
 rcommLM <- dplyr::select(rcomm, srness, rtype, id3, PM, daily,
                         obsdiff, ID,date_local, group, cat5sm, timemin, lPM,
                         awndL1 , prcpbinL1 ,
-                        tmaxL1, tminL1, snowbinL1m )  %>%
+                        tmaxL1, tminL1, snowbinL1m, RH )  %>%
   na.omit() %>%
   rename(awnd = awndL1 , prcpbin= prcpbinL1 ,
          tmax = tmaxL1, tmin = tminL1, snowbin= snowbinL1m )
+
+
+
+
 
 save(rcomm2, rcommLM, file = here("data/rcomm2.RData"))

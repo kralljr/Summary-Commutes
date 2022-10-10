@@ -64,7 +64,12 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
 11. fix-data.R: File to fix variables based on EDA
 
     - Input: rcomm.RData
-    - Output: rcomm2.RData
+    - Output: rcomm2.RData (includes formatted for lm)
+    
+12. iqrs-weath.R: File to create IQRs for interpreting lm results
+
+    - Input: rcomm2.RData
+    - Output: iqrs.RData
     
 X. check-roadiness-cells.R: Checking file with maps to verify NA cells
 X. roadiness-lm.Rmd: Preliminary LMM for commute data
@@ -80,3 +85,10 @@ For full data without GPS (for sensitivity analysis):
 
     - Output: pm-final.RData
     
+    
+# Analyses
+
+- roadiness-eda.Rmd: File to look at summary statistics/plots for rcomm2, va24: Helpful to look at html output
+
+    - creates: save(boxplot1, roadtype1, tripplot, dailypm, file = here("figures/eda-tabfig.RData")), save(winddir1, catweath,contweat1,  demo, file = here("results/supp-plots.RData"))
+

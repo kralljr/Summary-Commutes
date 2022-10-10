@@ -232,6 +232,7 @@ select(weather, date, prcp, prcpL1) %>% View()
 # merge RH
 weather0 <- weather
 # only RH for days of GESTDC data- fine
+rh <- dplyr::select(rh, -gestdc)
 weather <- full_join(weather, rh)
 
 # wind direction in degrees
