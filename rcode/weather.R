@@ -14,6 +14,9 @@ load(here("data/MainStates1.RData"))
 # load dates
 load(here("data/gestdc-dates.RData"))
 
+# load relative humidity
+load(here("data/relativehumidity.RData"))
+
 
 # rainfall: check longlat
 # lonlat <- cpc_prcp(dates$date_local[1], us = T)
@@ -225,36 +228,42 @@ weather <- select(weather, -sflag) %>%
             wsf2, wsf5))
 
 select(weather, date, prcp, prcpL1) %>% View()
+
+# merge RH
+weather0 <- weather
+# only RH for days of GESTDC data- fine
+weather <- full_join(weather, rh)
+
 # wind direction in degrees
 save(weather, file = here("data/weather-cleaned.RData"))
 
 
 
 
-
-# Try to get humidity
-# no humidity for these sites
-stat0 <- read.table("~/Dropbox/CommuteVar/data/ghcnd-stations-edit.txt", sep = "\t",
-                    header = F, na = " ")
-stat1 <- mutate(stat0, id = substr(V1, 1, 11),
-                lat = substr(V1, 13, 20),
-                long = substr(V1, 23, 30),
-                lat = as.numeric(lat),
-                long = as.numeric(long)) %>%
-  filter(lat > 38.65, lat < 39.1, long > -77.7, long < -77)
-nrow(stat1)
-k <- 1
-for(i in 1 : nrow(stat1)) {
-  dat0 <- ghcnd(stationid = stat1$id[i])
-  dat0 <- dplyr::filter(dat0, element %in% c("ADPT", "RHAV", "RHMN", "RHMX"))
-  if(nrow(dat0)> 0) {
-    if(k == 1) {
-      datall <- dat0
-      k <- k + 1
-    } else {
-      datall <- bind_rows(datall, dat0)
-    }
-  }
-}
-
-
+#
+# # Try to get humidity
+# # no humidity for these sites
+# stat0 <- read.table("~/Dropbox/CommuteVar/data/ghcnd-stations-edit.txt", sep = "\t",
+#                     header = F, na = " ")
+# stat1 <- mutate(stat0, id = substr(V1, 1, 11),
+#                 lat = substr(V1, 13, 20),
+#                 long = substr(V1, 23, 30),
+#                 lat = as.numeric(lat),
+#                 long = as.numeric(long)) %>%
+#   filter(lat > 38.65, lat < 39.1, long > -77.7, long < -77)
+# nrow(stat1)
+# k <- 1
+# for(i in 1 : nrow(stat1)) {
+#   dat0 <- ghcnd(stationid = stat1$id[i])
+#   dat0 <- dplyr::filter(dat0, element %in% c("ADPT", "RHAV", "RHMN", "RHMX"))
+#   if(nrow(dat0)> 0) {
+#     if(k == 1) {
+#       datall <- dat0
+#       k <- k + 1
+#     } else {
+#       datall <- bind_rows(datall, dat0)
+#     }
+#   }
+# }
+#
+#
