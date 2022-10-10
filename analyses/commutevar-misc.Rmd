@@ -40,11 +40,17 @@ obsdiff <- fighourly[[2]]
 obsdiff <- left_join(dates, obsdiff)
 
 datecom <- dplyr::select(rcomm1, date, ID) %>% unique()
+
+# plot of select
+unid <- unique(rcomm$id2)
+# number of unique commutes
+length(unid)
 ```
 
 # Number of observations
 
-- Number of trips `r nrow(rcomm1)`
+- Number of obs `r nrow(rcomm1)`
+- Number of trips `r length(unid)`
 - Number of days `r length(unique(rcomm1$date))`
 - Number of commuter-days `r nrow(datecom)`
 - Number of commuters `r length(unique(datecom$ID))`
@@ -98,6 +104,21 @@ filter(rcomm2, obs > 60) %>% dplyr::select(ID, date, cum1, obs) %>%
 
 ```
 
+# Weather station
+
+```{r}
+load(here("data/weather-raw.RData"))
+load(here("data/stations.RData"))
+
+weather <- na.omit(weather)
+uns <- unique(weather$id)
+
+stations1 <- filter(stations, id %in% uns) %>%
+  dplyr::select(id, latitude, longitude) %>% unique()
+
+map("county", xlim = c(-77.7, -77), ylim = c(38.6, 39.1))
+points(stations1$longitude, stations1$latitude, col = "red")
+```
 # Monitor type?
 
 ```{r}
