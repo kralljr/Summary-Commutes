@@ -31,15 +31,17 @@ library(RColorBrewer)
 load(here("data/rcomm2.RData"))
 
 
+# load iqrs
+load(here("data/iqrs.RData"))
+
 # get functions for models
 source(here("functions/model-funs.R"))
+
+
+
 ```
 
 # Distribution of PM
-
-- Remove PM < 25for models (for normality/skewness)
-
-Percent removed (1. <25, 2. missingness in model ocmponents)
 
 
 Meteorology:
@@ -47,51 +49,8 @@ Meteorology:
 - Lead snow
 
 
-```{r adjust}
-# Need to remove outliers?
-
-# remove
-shift <- 0.09
-rcomm <- filter(rcomm2, PM < 25)  %>% #, PM > 0) 
-  mutate(lPM = log(PM + shift),
-    cat5sm = fct_relevel(cat5sm, "NW"))
-
-
-# ID 3 is date/commute
-rcomm1 <- dplyr::select(rcomm, srness, rtype, id3, PM, daily, 
-    obsdiff, ID,date_local, group, cat5sm, timemin, lPM,
-    awndL1 , prcpbinL1 , 
-    tmaxL1, tminL1, snowbinL1m )  %>% 
-   na.omit() %>%
-  rename(awnd = awndL1 , prcpbin= prcpbinL1 , 
-    tmax = tmaxL1, tmin = tminL1, snowbin= snowbinL1m )
-
-iqrs <- dplyr::select(rcomm1, -any_of(c("PM", "lPM", "ID", "date_local",
-         "group",   "prcpbin", "snowbin", "rtype", "id3", "cat5sm"))) %>%
-  pivot_longer(srness : tmin) %>%
-  group_by(name)
-
-iqrs <- iqrs %>%
-  summarize(IQR = IQR(value)) %>%
-  mutate(IQR = ifelse(name %in% c("snowbin", "prcpbin"), 1, IQR)) %>%
-  rename(term = name)
-
-save(iqrs, file = here("data/iqrs.RData"))
-
-# percent removed
-((1 - nrow(rcomm) / nrow(rcomm2)) * 100) %>% round(., 1)
-((1 - nrow(rcomm1) / nrow(rcomm)) * 100) %>% round(., 1)
-
-```
-
-```{r, eval = F}
-# adjusting PM
-# rcomm <- mutate(rcomm2, aPM = PM - daily, aPM2 = PM + hourly, aPMall = aPM + hourly,
-#                 cat5sm = fct_relevel(cat5sm, "NW"))
-# 
-# rcomm1 <- dplyr::select(rcomm, ID, rdatetime, rness, PM, aPM : aPMall) %>%
-#   pivot_longer(PM : aPMall)
-
+```{r}
+rcomm1 <- rcommLM
 ```
 
 
@@ -151,7 +110,7 @@ g6 <- ggplot(rcomm1, aes(x = tmin, y = lPM)) +
 g7 <- ggplot(rcomm1, aes(x = timemin, y = lPM)) +
    geom_point() +geom_smooth() 
 
-(g1 + g2 + g3 ) / (g4 + g5 + g6 )
+(g1 + g2 + g3 ) / (g4 + g5 + g6 ) 
 
 g7
 ```
@@ -175,13 +134,6 @@ ggplot(rcommU1, aes(x = timemin, y = dPM, group = id3)) + geom_smooth()
 # Model
 
 
-
-
-
-
-
-#  Effect plots
-
 ```{r}
 # Fit AR1 correlation
 # groups are big / small
@@ -194,178 +146,147 @@ ggplot(rcommU1, aes(x = timemin, y = dPM, group = id3)) + geom_smooth()
 rcomm1 <- group_by(rcomm1, ID, id3) %>%
   arrange(rcomm1, timemin) %>%
   ungroup()
+```
+
+
+## Roadiness 
+
+```{r}
+eqn1 <- "lPM ~ srness"
+res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3")
+res1rn <- res1
+
+eqn2 <- "lPM ~ srness + awnd + prcpbin + 
+               tmax  + tmin +  RH + 
+               cat5sm + snowbin" 
+res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+
+
+eqn3 <- "lPM ~ srness + daily + obsdiff" 
+res3 <- get_lme(rcomm1, iqrs, eqn3, re = "~ 1| ID / id3")
+
+resl <- list(Main = res1, Weather = res2, PM = res3)
+plot_nocat_sens(resl, "srness")
 
 ```
 
 
+## Road type 
+
 ```{r}
-eqn1 <- "lPM ~ srness + daily + obsdiff + awnd + prcpbin + 
-               tmax  + tmin + rtype + 
-               cat5sm + snowbin"
-res <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3") 
+eqn1 <- "lPM ~ rtype"
+res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3")
+res1rt <- res1
 
-# Get residuals
-lme1b <- res$aug
-lme1 <- res$lme1
-t1 <- res$t1
+eqn2 <- "lPM ~ rtype + awnd + prcpbin + 
+               tmax  + tmin +  RH + 
+               cat5sm + snowbin" 
+res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
 
-save(res, file = here("results/main-res.RData"))
+
+eqn3 <- "lPM ~ rtype + daily + obsdiff" 
+res3 <- get_lme(rcomm1, iqrs, eqn3, re = "~ 1| ID / id3")
+
+resl <- list(Main = res1, Weather = res2, PM = res3)
+plot_cat_sens(resl, "rtype")
+
 ```
 
 
-
-## Plot
-
-
+## Speed
 
 ```{r}
-plot_cat(res)
+
+
 ```
 
+## Traffic
 
 
-```{r}
-plot_nocat(res)
-```
 
 
-```{r}
-arrange(t1, p.value) %>% select(term1, IQR,estimateIQR ,conf.lowIQR, conf.highIQR, df, p.value ) %>%
-  kable(digits = 2)
-
-arrange(t1, desc(abs(estimateIQR)))%>% select(term1, IQR,estimateIQR ,conf.lowIQR, conf.highIQR, df, p.value ) %>%
-  kable(digits = 2)
-```
-
-## Check residuals
-
-
+## All
 
 ```{r}
-ACF(lme1, resType = "normalized", maxLag = 10) %>% plot()
+eqnA <- "lPM ~ srness + rtype"
+resA <- get_lme(rcomm1, iqrs, eqnA, re = "~ 1| ID / id3") 
 
+# still autocorr
+ACF(resA$lme1, resType = "normalized", maxLag = 10) %>% plot()
+lme1b <- resA$aug
 hist(lme1b$.resid)
 
 
-long <- pivot_longer(lme1b, c(daily, obsdiff, awnd, tmax, tmin, srness, .fitted))
+long <- pivot_longer(lme1b, c(daily, obsdiff, awnd, tmax, tmin, srness, .fitted)) %>%
+  filter(name %in% "srness")
 ggplot(long, aes(x = value, y = .resid)) +
   geom_point() +
   facet_wrap(~name, scales = "free")
 
+
 long <- mutate(lme1b, #snowbin = factor(snowbin),
                prcpbin = factor(prcpbin)) %>%
-  pivot_longer(c(prcpbin, cat5sm, rtype)) #snowbin, 
+  pivot_longer(c(prcpbin, cat5sm, rtype))  %>% #snowbin, 
+  filter(name %in% "rtype")
 ggplot(long, aes(x = value, y = .resid)) +
   geom_boxplot() +
   facet_wrap(~name, scales = "free")
 
-
 ```
 
-
-
-
-## Variance components
-
-
-
-
-
-
-
-
-LME components
-
-- sigma: the estimated within-group error standard deviation: `r lme1$sigma`
-- AR correlation: `r lme1$modelStruct$corStruct`
-- Components of variability:
 
 ```{r}
-
-ggplot(res$re, aes(x = est, y = name)) + 
-  geom_pointrange(aes(xmin = lower, xmax = upper )) +
-  xlab("Estimate") + ylab("")
-
-```
-
-
-```{r, eval =F}
-
-#
-# scale to 1
-# > print(lme1$modelStruct$reStruct)
-# Random effects:
-#  Formula: ~1 | ID
-#         (Intercept)
-# StdDev:    1.323336 (DIVIDED BY RESIDUAL)
-# 
-#  Formula: ~1 | id3 %in% ID
-#         (Intercept) Residual
-# StdDev:    1.588816        1
-
-
-# unconstrained: 	
-# a logical value. If TRUE the coefficients are returned in unconstrained form (the same used in the optimization algorithm). If FALSE the coefficients are returned in "natural", possibly constrained, form. Defaults to TRUE.
-
-
-# in unconstrained form (the same used in the optimization algorithm).
-#  >  coef(lme1$modelStruct, unconstrained = T)
-# reStruct.id3  reStruct.ID    corStruct 
-unc <- c(  0.4629889,    0.2801560  ,  0.2113650 )
-
-
-unc[1] / unc[2]
-#  cor
-unc1 <- unc[3]
- aux <- exp(unc[3])
-(aux - 1) / (aux + 1)
-
-
-# coefficients are returned in "natural", possibly constrained, form.
- # > coef(lme1$modelStruct, unconstrained = F)
- # reStruct.id3.var((Intercept))  reStruct.ID.var((Intercept))                 corStruct.Phi 
- #                    2.5243354                     1.7512190                     0.1052908 
- # 
-scales <- sqrt(c(   2.5243354        ,             1.7512190  ))
-scales
-scales[c(1, 2)] * lme1$sigma
-
-print(lme1)
-
-# Random effects:
-#  Formula: ~1 | ID
-#         (Intercept)
-# StdDev:   0.5211989
-# 
-#  Formula: ~1 | id3 %in% ID
-#         (Intercept)  Residual
-# StdDev:   0.6257585 0.3938522
-```
-
-
-
-```{r, eval = F}
-# lme1$apVar # vcov of variance comp
+resl <- list(Main = res1rt, All = resA)
+plot_cat_sens(resl, "rtype")
 ```
 
 ```{r}
 
-# an object inheriting from class lmeStruct, representing a list of mixed-effects model components, such as reStruct, corStruct, and varFunc objects.
+resl <- list(Main = res1rn, All = resA)
+plot_nocat_sens(resl, "srness")
+```
 
 
-# other misc:
-# cs1 <- corARMA(form = ~ 1|ID/group, p = 5, q = 5)
-# resid <- resid(lme1, type = "normalized")
-# VarCorr(lme1d)
 
 
-# # basically 0
-# lme2$coef$random$date_local %>% sd()
-# lme3$coef$random$group %>% sd()
+```{r}
+# Get residuals
+save(resA, res1rn, res1rt, file = here("results/main-res.RData"))
+```
 
-# 
-# lme1$coef$random$id3 %>% sd()
-# lme1$coef$random$ID %>% sd()
-```         
-    
 
+
+
+
+
+
+
+
+
+
+# Misc
+
+
+## Weather
+
+
+```{r}
+eqn1 <- "lPM ~  awnd + prcpbin + 
+               tmax  + tmin +  RH + 
+               cat5sm + snowbin"
+res <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3") 
+
+plot_cat(res)
+
+```
+
+
+## Ambient daily and hourly PM
+
+```{r}
+eqn1 <- "lPM ~ daily + obsdiff"
+res <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3") 
+
+plot_nocat(res)
+
+```
