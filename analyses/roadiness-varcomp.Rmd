@@ -1,0 +1,147 @@
+---
+title: 'Variance components'
+author: "Jenna Krall"
+date: "10/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(knitr)
+library(here)
+library(lme4)
+library(broom.mixed)
+library(ggthemes)
+library(nlme)
+library(forcats)
+library(patchwork)
+library(RColorBrewer)
+# library(lmeInfo)
+
+```
+
+
+```{r}
+# load data
+load(here("data/rcomm2.RData"))
+
+
+# load iqrs
+load(here("data/iqrs.RData"))
+
+# get functions for models
+source(here("functions/model-funs.R"))
+
+# load model results
+load(here("results/main-res.RData"))
+
+```
+## Variance components
+
+
+
+
+
+
+
+
+LME components
+
+- sigma: the estimated within-group error standard deviation: `r lme1$sigma`
+- AR correlation: `r lme1$modelStruct$corStruct`
+- Components of variability:
+
+```{r}
+
+ggplot(res$re, aes(x = est, y = name)) + 
+  geom_pointrange(aes(xmin = lower, xmax = upper )) +
+  xlab("Estimate") + ylab("")
+
+```
+
+
+```{r, eval =F}
+
+#
+# scale to 1
+# > print(lme1$modelStruct$reStruct)
+# Random effects:
+#  Formula: ~1 | ID
+#         (Intercept)
+# StdDev:    1.323336 (DIVIDED BY RESIDUAL)
+# 
+#  Formula: ~1 | id3 %in% ID
+#         (Intercept) Residual
+# StdDev:    1.588816        1
+
+
+# unconstrained: 	
+# a logical value. If TRUE the coefficients are returned in unconstrained form (the same used in the optimization algorithm). If FALSE the coefficients are returned in "natural", possibly constrained, form. Defaults to TRUE.
+
+
+# in unconstrained form (the same used in the optimization algorithm).
+#  >  coef(lme1$modelStruct, unconstrained = T)
+# reStruct.id3  reStruct.ID    corStruct 
+unc <- c(  0.4629889,    0.2801560  ,  0.2113650 )
+
+
+unc[1] / unc[2]
+#  cor
+unc1 <- unc[3]
+ aux <- exp(unc[3])
+(aux - 1) / (aux + 1)
+
+
+# coefficients are returned in "natural", possibly constrained, form.
+ # > coef(lme1$modelStruct, unconstrained = F)
+ # reStruct.id3.var((Intercept))  reStruct.ID.var((Intercept))                 corStruct.Phi 
+ #                    2.5243354                     1.7512190                     0.1052908 
+ # 
+scales <- sqrt(c(   2.5243354        ,             1.7512190  ))
+scales
+scales[c(1, 2)] * lme1$sigma
+
+print(lme1)
+
+# Random effects:
+#  Formula: ~1 | ID
+#         (Intercept)
+# StdDev:   0.5211989
+# 
+#  Formula: ~1 | id3 %in% ID
+#         (Intercept)  Residual
+# StdDev:   0.6257585 0.3938522
+```
+
+
+
+```{r, eval = F}
+# lme1$apVar # vcov of variance comp
+```
+
+```{r}
+
+# an object inheriting from class lmeStruct, representing a list of mixed-effects model components, such as reStruct, corStruct, and varFunc objects.
+
+
+# other misc:
+# cs1 <- corARMA(form = ~ 1|ID/group, p = 5, q = 5)
+# resid <- resid(lme1, type = "normalized")
+# VarCorr(lme1d)
+
+
+# # basically 0
+# lme2$coef$random$date_local %>% sd()
+# lme3$coef$random$group %>% sd()
+
+# 
+# lme1$coef$random$id3 %>% sd()
+# lme1$coef$random$ID %>% sd()
+```         
+    
+
