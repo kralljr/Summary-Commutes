@@ -96,51 +96,38 @@ plot_re <- function(re) {
 
 
 
-plot_cat <- function(res) {
 
-  cat<- filter(res$t1, type2 == "cat") %>%
-    mutate(type2 = ifelse(term %in% c("cat5smSE", "cat5smOther"), "Wind direction",
-                          ifelse(term %in% c("rtypeOther", "rtypeLocal", "rtypeLocalConn"), "Road type",
-                                 as.character(term1))),
-           term2 = ifelse(term %in% c("cat5smSE","rtypeLocal" ), 2,
-                          ifelse(term %in% c("cat5smOther", "rtypeLocalConn"), 3,
-                                 ifelse(term == "rtypeOther", 4, 1))), term2 = factor(term2),
-           type2 = factor(type2, levels = c("Precipitation", "Snow", "Wind direction", "Road type")))
+
+
+
+plot_cat_sens <- function(reslist, myterm) {
+  nc <- nchar(myterm)
+  list1 <- lapply(reslist, function(x) filter(x$t1, substr(term, 1, nc) == myterm))
+  for(i in 1 : length(list1)) {
+    list1[[i]] <- mutate(list1[[i]], name = names(reslist)[i])
+    if(i == 1) {
+      lista <- list1[[i]]
+    } else {
+      lista <- bind_rows(lista, list1[[i]])
+    }
+  }
+  lista <- mutate(lista, name = factor(name, levels = names(reslist)),
+                  term = substring(term, nc + 1))
 
   cols <- brewer.pal(8, "Dark2")
-  g1 <- ggplot(cat, aes(y = term1, x = estimate)) +
-    geom_pointrange(aes(xmin = conf.low, xmax = conf.high,
-                        colour = term2),
+  g1 <- ggplot(lista, aes(y = term, x = estimate)) +
+    geom_pointrange(aes(xmin = conf.low, xmax = conf.high, colour = name),
                     position = position_dodge(0.2)) +
     scale_colour_manual(values = cols,  guide = "none") +
     geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
     xlab("") +
     ylab(expression(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ") compared to reference"))) +
     theme_bw() +
-    theme(text = element_text(size = 12)) + facet_wrap(~type2, scales = "free_y", ncol = 1)
-
+    theme(text = element_text(size = 12))
   g1
 
 
 }
-
-
-plot_nocat <- function(res) {
-
-  g2 <- ggplot(filter(res$t1, type2 != "cat"), aes(y = term1, x = estimateIQR)) +
-    geom_pointrange(aes(xmin = conf.lowIQR, xmax = conf.highIQR)) +
-    geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
-    xlab("") +
-    ylab(expression(atop(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ")" ), " per IQR increase"))) +
-    theme_bw() +
-    theme(text = element_text(size = 24))
-
-  g2
-
-}
-
-
-
 
 
 plot_cat <- function(res) {
@@ -200,9 +187,37 @@ plot_catALL <- function(t1) {
 }
 
 
+plot_nocat_sens <- function(reslist, myterm) {
+  list1 <- lapply(reslist, function(x) filter(x$t1, term == myterm))
+
+  for(i in 1 : length(list1)) {
+
+    list1[[i]] <- mutate(list1[[i]], name = names(reslist)[i])
+    if(i == 1) {
+      lista <- list1[[i]]
+    } else {
+      lista <- bind_rows(lista, list1[[i]])
+    }
+
+  }
+  lista <- mutate(lista, name = factor(name, levels = names(reslist)))
+
+  g2 <- ggplot(lista, aes(y = name, x = estimateIQR)) +
+    geom_pointrange(aes(xmin = conf.lowIQR, xmax = conf.highIQR)) +
+    geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
+    xlab("") +
+    ylab(expression(atop(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ")" ), " per IQR increase"))) +
+    theme_bw() +
+    theme(text = element_text(size = 12))
+
+  g2
+
+}
+
 plot_nocat <- function(res) {
 
-  g2 <- ggplot(filter(res$t1, type2 != "cat"), aes(y = term1, x = estimateIQR)) +
+  res1 <- filter(res$t1, type2 != "cat", !is.na(estimateIQR))
+  g2 <- ggplot(res1, aes(y = term1, x = estimateIQR)) +
     geom_pointrange(aes(xmin = conf.lowIQR, xmax = conf.highIQR)) +
     geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
     xlab("") +
