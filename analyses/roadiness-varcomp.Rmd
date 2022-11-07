@@ -47,7 +47,9 @@ load(here("results/main-res.RData"))
 
 
 
-
+```{r}
+lme1 <- resA$lme1
+```
 
 
 LME components
@@ -58,13 +60,35 @@ LME components
 
 ```{r}
 
-ggplot(res$re, aes(x = est, y = name)) + 
+ggplot(resA$re, aes(x = est, y = name)) + 
   geom_pointrange(aes(xmin = lower, xmax = upper )) +
   xlab("Estimate") + ylab("")
 
 ```
 
 
+## ICC
+
+```{r}
+# ID, id3, rand
+# btw vs. within
+# id vs all
+REs <- resA$re$est
+names(REs) <- resA$re$name
+REs["ID"]^2 / (sum(REs^2))
+REs["id3"]^2 / (REs["id3"]^2+ REs["sigma"]^2)
+sum(REs^2)
+performance::icc(resA$lme1)
+
+resA$re$est[1]^2 / (resA$re$est[1]^2  + resA$re$est[2]^2 )
+resA$re$est[1]^2  / (resA$re$est[1]^2  + resA$re$est[3]^2 )
+lme1$sigma / 
+# sig2bt  /  (sig2bt + sig2wi)
+# sig2bt is random intercept var (between person)
+# sig2wi is random var (within person)
+```
+
+# Documentation
 ```{r, eval =F}
 
 #
@@ -144,4 +168,5 @@ print(lme1)
 # lme1$coef$random$ID %>% sd()
 ```         
     
+
 
