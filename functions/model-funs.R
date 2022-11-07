@@ -1,10 +1,13 @@
 
 
-get_lme <- function(data1, iqrs, eqn1, re = "~1 | ID / id3", intervals = T, corr = T) {
+get_lme <- function(data1, iqrs, eqn1, rer = "~timemin | ID / id3",
+                    re = "~1 | ID / id3", intervals = T, corr = T) {
 
   # get correlation
   if(corr) {
-    cs1 <- corAR1(form = formula(re))
+    #
+    cs1 <- corARMA(form = formula(rer), p = 1, q = 1)
+    cs1 <- corAR1(form = formula(rer))
     cs1 <- Initialize(cs1, data = data1)
   } else {
     cs1 <- NULL
@@ -86,6 +89,31 @@ get_lme <- function(data1, iqrs, eqn1, re = "~1 | ID / id3", intervals = T, corr
   list(t1 = t1, re = re, cor = cor, lme1 = lme1, aug = lme1b)
 }
 
+
+
+runlag <- function(data1, iqrs, eqn1, rer = "~timemin | ID / id3",
+                   re = "~1 | ID / id3", intervals = T, corr = T, lags = c(0)) {
+
+  k <- 1
+  resall <- list()
+  for(i in seq_along(lags)) {
+    print(i)
+    datlag <- group_by(data1, ID, id3) %>%
+      arrange(ID, id3, rdatetime) %>%
+      mutate(var = dplyr::lag(var, lags[i])) %>%
+      dplyr::select(ID, id3, var, lPM) %>%
+      na.omit() %>%
+      mutate(keeps = 1, timemin = cumsum(keeps))
+    resall[[k]] <- get_lme(datlag, iqrs, eqn1, re = "~ 1| ID / id3",
+                           intervals = intervals, corr = corr)
+    k <- k + 1
+
+  }
+  names(resall) <- paste0("lag", lags)
+  resall
+}
+
+
 plot_re <- function(re) {
 
 
@@ -114,11 +142,11 @@ plot_cat_sens <- function(reslist, myterm) {
   lista <- mutate(lista, name = factor(name, levels = names(reslist)),
                   term = substring(term, nc + 1))
 
-  cols <- brewer.pal(8, "Dark2")
+  cols <- rep(brewer.pal(8, "Dark2"), 2)
   g1 <- ggplot(lista, aes(y = term, x = estimate)) +
     geom_pointrange(aes(xmin = conf.low, xmax = conf.high, colour = name),
                     position = position_dodge(0.2)) +
-    scale_colour_manual(values = cols,  guide = "none") +
+    scale_colour_manual(values = cols) +
     geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
     xlab("") +
     ylab(expression(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ") compared to reference"))) +
