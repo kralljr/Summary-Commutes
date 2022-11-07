@@ -5,6 +5,11 @@ date: "1/7/2021"
 output: html_document
 ---
 
+
+
+
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = T)
 ```
@@ -35,204 +40,15 @@ library(dplyr)
 
 ```{r}
 # load data
-load(here("data/rcomm2.RData"))
-load(here("data/gpslatlon.RData"))
-load(here("data/MainStates1.RData"))
+load(here("data/comparedat.RData"))
 ```
 
 
-
-
-```{r plotfun, fig.width = 10}
-
-
-g2 <- function(dat) {
-  xs <- c(min(dat$Longitude), max(dat$Longitude))
-  ys <- c(min(dat$Latitude), max(dat$Latitude))
-  ggplot() +
-  geom_polygon( data=MainStates1, aes(x=long, y=lat, group = group),
-                color="grey50",fill = "white") +
-  geom_point(data = dat, aes(x = Longitude, y = Latitude, colour = min), alpha = 0.2) +
-    scale_color_manual(values = cols) + 
-    xlim(xs) + ylim(ys) +
-  theme(legend.position = "none") +
-  xlab("Longitude") + ylab("Latitude") + theme_bw()
-}
-
-cols <- brewer.pal(8, "Dark2")
-
-
-```
-
-# Get data
-
-```{r}
-# find IDs from first plot (explore)
-ids <- paste0("GMU10", c("01", "07", 16, 18, 32, 35, 36, 37, 40, 45))
-
-# restrict to these IDs
-rcomm2 <- filter(rcomm2, ID %in% ids) %>%
-  # format date/times
-  mutate(dt1 = lubridate::date(rdatetime), 
-                dt2 =  lubridate::as_datetime(dt1),
-                dt2= lubridate::force_tz(dt2, "America/New_York"),
-                diff1 = rdatetime - dt2) #, diff1 = diff1 / 60 / 60)
-
-
-# GPS data
-dat <- gpslatlon$dat %>% 
-  # Get date/time for GPS
-  mutate(rdatetime = dmy_hms(`Date & Time`)) %>%
-  dplyr::select(1, c(3 : 4), rdatetime) %>%
-  filter(Latitude != 0)
-
-# Find unique commutes by time
-rc1 <- dplyr::select(rcomm2, rdatetime, ID, date_local, group) %>%
-  arrange(ID, date_local, group) %>%
-  group_by(ID, date_local, group) %>%
-  mutate(min = min(rdatetime)) %>% ungroup()
-
-# number of obs
-rows <- rc1 %>%
-  dplyr::group_by(ID) %>%
-  dplyr::select(ID, date_local, group) %>%
-  unique() %>%
-  mutate(rows = row_number())
-
-# combine
-rc1 <- full_join(rc1, rows)
-
-# join GPS and commute
-join1 <- left_join(rc1, dat) %>% na.omit()
-
-
-```
-
-
-
-# Morning commutes
-
-
-```{r, fig.width =10}
-morning <- filter(rcomm2, hour(rdatetime) < 11)
-# morning only
-# 1, 7, 16, 18 (3?), 
-
-ggplot(morning, aes(x = diff1, y = date_local, fill = rtype)) +
-  geom_tile() +
-  facet_wrap(~ID, ncol = 3, scales = "free_y")
-
-```
-
-
-
-
-
-
-## Map all
-
-- 7 morning commutes
-
-- 32 only in evening
-- 35: 2 directions
-- 36: Different destination/no overlap
- 
-```{r, fig.height=3, fig.width = 5}
-
-
-# restrict to same morning commutes
-jmorning <- filter(join1, hour(rdatetime) < 11,
-                !(ID == "GMU1007" & Longitude > -77.315),
-                !(ID == "GMU1016" & Longitude > -77.25),
-                !(ID == "GMU1018" & min == "2018-11-07 09:28:00"),
-                !(ID == "GMU1037" & Longitude < -77.305),
-                 !(ID == "GMU1040" & (Longitude < -77.28)),
-                !(ID == "GMU1045" & (Longitude < -77.21)),
-                !(ID %in% c("GMU1032", "GMU1035", "GMU1036"))) %>%
-  mutate(min = as.character(min), 
-          min = ifelse(ID == "GMU1040" & min == "2019-02-13 09:01:00", "2019-02-13 08:43:00", min), commute = "morning")
-
-## 35 looks like 2 different ways?
-# 32 only one morning commute
-# 36no overlap
-
-unid <- unique(jmorning$ID)
-for(i in seq_along(unid)) {
-  
-  print(unid[i])
-  
-  print(g2(filter(jmorning, ID == unid[i])))
-}
-
-```
-
-
-# Evening commutes
-
-- 5 commutes
-
-
-```{r}
-evening <- filter(rcomm2, hour(rdatetime) >12, ID %in% paste0("GMU10", c("01", 32, 36, 37, 40)))
-
-ggplot(evening, aes(x = diff1, y = date_local, fill = rtype)) +
-  geom_tile() +
-  facet_wrap(~ID, ncol = 3, scales = "free_y")
-
-```
-
-
-
-
-
-
-## Map all
-
-
-```{r, fig.height=3}
-
-
-# restrict to same evening commutes
-jevening <- filter(join1, hour(rdatetime) > 12, ID %in% paste0("GMU10", c("01", 32, 36, 37, 40)),
-               !(ID == "GMU1001" & min == "2018-05-08 18:44:00"),
-                  !(ID == "GMU1032" & Latitude > 38.69),
-                 !(ID == "GMU1036" & Longitude > -77.24),
-                !(ID == "GMU1037" & min == "2019-02-05 22:08:00"),
-                !(ID == "GMU1037" & (Longitude < -77.27 | Latitude > 38.92 | Latitude < 38.877)),
-               !(ID == "GMU1040" & (Longitude < -77.28 | Longitude >-77.20))) %>%
-  
-   mutate(min = as.character(min), commute = "evening")
-unid <- unique(jevening$ID)
-for(i in seq_along(unid)) {
-  
-  print(unid[i])
-  
-  print(g2(filter(jevening, ID == unid[i])))
-}
-
-
-
-```
-
-
-
-
-
-# Commute compare
+# Table of paired  
 
 - Diff is difference in commute length (minutes)
 - Diffhour is difference in when commute started (minutes)
 ```{r}
-compare <- full_join(jmorning, jevening) %>%
-  mutate(date = date(rdatetime)) %>%
-  group_by(ID, date, commute) %>%
-  # get time since commute start
-  mutate(min = min(rdatetime),
-         time = difftime(rdatetime, min, units= "mins"), maxtime = max(time)) %>%
-  ungroup() %>% group_by(ID, commute) %>%
-         mutate(mindate = min(date(rdatetime)), date1 = ifelse(date(rdatetime) == mindate, "day1", "day2"))
-
-
 
 compare1 <- ungroup(compare) %>%
   dplyr::select(ID, commute, date1, maxtime) %>% unique() %>%
@@ -259,7 +75,7 @@ kable(compare2)
 ```
 
 
-**Total observations**
+**Total lat/lon observations**
 
 ```{r}
 ungroup(compare) %>%
@@ -312,26 +128,6 @@ ungroup(compare) %>% dplyr::select(ID, commute, date1, rdatetime, min) %>%
 
 ```
 
-```{r, eval = F}
-# check GMU1040
-gmu1040 <- filter(gpslatlon$dat, ID == "GMU1040")
-colnames(gmu1040)[2] <- "date"
-#2019-02-13
-gmu1040 <- filter(gmu1040, substr(date, 1, 5) == "13 Fe") %>%
-  mutate(hour = as.numeric(substr(date, 18, 19)),
-                           minute = as.numeric(substr(date, 21, 22)))
-
-
-as_datetime(as.POSIXct("2019-02-13 00:10:10", tz = "GMT"), tz = "America/New_York") 
-
-as_datetime(as.POSIXct("2019-02-13 08:48:00", tz = "America/New_York"), tz = "GMT") 
-
-gmu1040 %>%
-  filter((hour == 13 & minute > 55) | (hour == 14 & minute < 2)) %>% View(  )
-
-```
-
-
 **Differences between commute start time**
 
 ```{r}
@@ -353,31 +149,6 @@ mutate(compare1, absdiff = abs(diff)) %>%
 
 # PM data
 
-```{r}
-load(here("data/pm-cleaned.RData"))
-load(here("data/va24.RData"))
-load(here("data/vah.RData"))
-
-
-pm1 <- dplyr::select(pm1, rdatetime, PM, ID) %>% unique() %>%
-                mutate(  lPM = log(PM + 0.01))
-
-
-
-# restrict compare to only those with unique PM2.5 measurements (minute
-compare1 <- compare %>%  dplyr::select(-c("Longitude", "Latitude")) %>%
-  unique()
-
-comparepm <- left_join(compare, pm1) %>%
-  mutate(time_local = hour(rdatetime),
-         time_local = ifelse(time_local == 24, 0, time_local)) %>%
-  left_join(va24) %>%
-  left_join(vah0) %>%
-  ungroup() %>%
-  group_by(ID, date, commute) %>%
-  mutate( time = as.numeric(time),maxtime = max(time),
-         proptime = time / maxtime, adpmd = PM - daily, ahour = PM + obsdiff ) 
-```
 
 
 ## Distributions
@@ -391,35 +162,40 @@ ggplot(comparepm, aes(x = PM, y= ..density.., fill = date1)) + geom_histogram(bi
 ggplot(comparepm, aes(x = date1, y = lPM)) + geom_boxplot() +
   facet_wrap(ID ~ commute, scales= "free")
 
+
+```
+
+Note: GMU1001 on the right had a 0 value (hence very negative/apparent difference here not found in subsequent plot)
+
+## Summary 
+
+
+```{r}
+
 s1 <- group_by(comparepm, ID, date1, commute) %>%
   summarize(mean = mean(lPM), sd1 = sd(lPM), n = n()) %>%
   mutate(se = sd1 / sqrt(n), lb = mean - 1.96 * se, ub = mean + 1.96 * se,
          id = paste0(ID, commute)) %>% ungroup() %>%
   group_by(ID, commute) %>%
          mutate(minmean = min(mean),day = ifelse(mean == minmean, "Obs1", "Obs2")) 
-```
 
-Note: GMU1001 on the right had a 0 value (hence very negative/apparent difference here not found in subsequent plot)
-```{r}
 ggplot(s1, aes(x = fct_reorder(id, minmean), y = mean))  + 
   geom_pointrange(aes(ymin = lb, ymax = ub, colour = day)) +
-  ylab("log PM2.5") + xlab("Commute") +
+  ylab("mean log PM2.5") + xlab("Commute") +
   theme(axis.text.x = element_blank())
 ```
 
 
+### median by day
 
 ```{r}
 s1b <- group_by(comparepm, ID, date1, commute) %>%
-  summarize(mean = median(PM), sd1 = sd(lPM), n = n()) %>%
-  mutate(se = sd1 / sqrt(n), lb = mean - 1.96 * se, ub = mean + 1.96 * se,
-         id = paste0(ID, commute)) %>% ungroup() %>%
-  group_by(ID, commute) %>%
-         mutate(minmean = min(mean),day = ifelse(mean == minmean, "Obs1", "Obs2")) %>% ungroup() %>% dplyr::select(ID, date1, commute, mean) %>%
+  summarize(mean = median(PM), sd1 = sd(lPM), n = n()) %>% ungroup() %>%
+  dplyr::select(ID, date1, commute, mean) %>%
   pivot_wider(names_from = "date1", values_from = "mean")
 ```
 
-
+Differences between day1 and day2
 
 ```{r}
 mutate(s1b, diff = abs(day1 - day2)) %>%
@@ -436,6 +212,7 @@ pairedpoint <- list(pairedpoint, s1b)
 
 
 ## Time since commute
+
 ```{r}
 
 ggplot(comparepm, aes(x = time, y = PM, colour = date1)) + geom_point(alpha = 0.2) +
@@ -454,7 +231,11 @@ ggplot(comparepm, aes(x = time, y = PM, colour = date1)) + geom_point(alpha = 0.
 ggplot(comparepm, aes(x = proptime, y = PM, colour = date1)) +geom_point(alpha = 0.2) +
   geom_smooth() +
     facet_wrap(ID ~ commute, scales= "free")
+```
 
+### adjust for daily
+
+```{r}
 ggplot(comparepm, aes(x = proptime, y = adpmd, colour = date1)) + geom_point(alpha = 0.2) +
   geom_smooth() +
     facet_wrap(ID ~ commute, scales= "free")
@@ -462,7 +243,7 @@ ggplot(comparepm, aes(x = proptime, y = adpmd, colour = date1)) + geom_point(alp
 
 ## Adjust for day
 
-Doesn't seem like day explains
+Doesn't seem like day explains.  Day shown in red
 
 ```{r}
 
@@ -470,7 +251,7 @@ cva24 <- dplyr::select(comparepm, ID, date, daily, commute, date1) %>% unique() 
   mutate(ldaily = log(daily + 0.01))
 
 ggplot() + geom_boxplot(data =comparepm, aes(x = date1, y = lPM)) +
-  geom_point(data = cva24, aes(x = date1, y = ldaily, colour = "red")) +
+  geom_point(data = cva24, aes(x = date1, y = ldaily), colour = "red") +
   facet_wrap(ID ~ commute, scales= "free")
 
 ```
@@ -515,7 +296,3 @@ filter(s1b, day1 > 5 | day2 > 5)
 ```
 
 
-```{r}
-comparepm <- ungroup(comparepm)
-save(pairedpoint, comparepm, file = here("data/commutecompare-res.RData"))
-```

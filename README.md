@@ -72,7 +72,6 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
     - Output: iqrs.RData
     
 X. check-roadiness-cells.R: Checking file with maps to verify NA cells
-X. roadiness-lm.Rmd: Preliminary LMM for commute data
 X. roadtypes.R: Show road type dictionary
 X. windrose.R: File to make a windrose plot
 X. VA_PM2.5_2015_2020_monitors: Creates  va_monitor_data.RData
@@ -92,3 +91,37 @@ For full data without GPS (for sensitivity analysis):
 
     - creates: save(boxplot1, roadtype1, tripplot, dailypm, file = here("figures/eda-tabfig.RData")), save(winddir1, catweath,contweat1,  demo, file = here("results/supp-plots.RData"))
 
+
+- roadiness-lm.Rmd: Preliminary LMM for commute data
+
+- roadiness-varcomp.Rmd: Variance components
+
+X. roadiness-sens.Rmd: Old sensitivity analyses 
+
+# Compare commutes
+
+1. compare-commutes-createdat.Rmd: Explore and create comparison of paired commutes.  
+
+     - Input: pm-cleaned, va24.RData, vah.RData, MainStates1.RData, gpslatlon.RData, rcomm2.RData
+     - Output: comparedat.RData (compare, comparepm)
+     
+2. compare-commutes.Rmd: Summarize comparison of paired commutes
+
+     - Input:  comparedat.RData (compare, comparepm)
+     - Output: None, may want first summary table info
+
+
+3. compare-commutes-loc.Rmd: Adjust by commute location
+
+     - Input: comparedat.RData
+     - Output: data/commute-loc.RData
+     
+     
+     
+# Final results
+
+- commutevar-tables-figures.Rmd: Tables and figures for paper
+
+- commutevar-supplement.Rmd: supplementary material for paper
+
+- commutevar-misc.Rmd: Miscellany for paper

@@ -23,9 +23,8 @@ library(RColorBrewer)
 library(forcats)
 library(lubridate)
 
-library( sf)
-library( data.table)
-library( viridis)
+
+library(broom.mixed)
 # add here to fixfile path
 # need raster package
 library(raster)
@@ -36,7 +35,7 @@ library(nlme)
 ```
 
 ```{r}
-load(here("data/commutecompare-res.RData"))
+load(here("data/comparedat.RData"))
 load(here("data/rcomm2.RData"))
 load(here("data/iqrs.RData"))
 load(here("data/commute-loc.RData"))
@@ -49,26 +48,153 @@ source(here("functions/model-funs.R"))
 
 
 ```{r}
-weath <- dplyr::select(rcomm2, date_local, awndL1, prcpL1, snowL1m, tmaxL1, tminL1, cat5sm) %>% unique()
+weath <- dplyr::select(rcomm2, date_local, awnd, prcpbin, RH, snowbin, tmax, tmin, cat5sm) %>% unique()
 
-coms2 <- dplyr::select(coms2, -PM)
+coms3 <- dplyr::select(coms2, -PM)
 comparepm1 <- left_join(comparepm, weath) %>%
-  full_join(coms2)
+  dplyr::select(-c(Latitude, Longitude)) %>%
+  unique() %>%
+  left_join(coms3) %>%
+  mutate(IDcommute = paste0(ID, commute)) %>%
+  rename(timemin = time) %>%
+  ungroup() %>%
+  group_by(IDcommute, date_local, timemin) %>%
+  mutate(propcs = mean(propcs)) %>%
+  ungroup() %>%
+  unique()
 
+# check ID
+# dplyr::select(ungroup(comparepm1), IDcommute, timemin) %>% unique() %>% View()
+# anti1 <- anti_join(coms2, comparepm)
 
-anti1 <- anti_join(coms2, comparepm)
+# dplyr::select(ungroup(comparepm1), IDcommute, date_local, timemin) %>% unique() %>% View()
+dplyr::select(ungroup(comparepm1), IDcommute, date_local, timemin) %>%
+  group_by(IDcommute, date_local) %>%
+  mutate(dup = duplicated(timemin)) %>%
+  filter(dup)
 ```
 
-- Length of commutes
-- Spatial variation is not important?
+
+
+
+```{r}
+get_lme <- function(data1, iqrs, covar, rer = "~timemin | IDcommute / date_local",
+                    re = "~1 | IDcommute / date_local", intervals = T, corr = T) {
+
+  # get correlation
+  if(corr) {
+    #
+    cs1 <- corARMA(form = formula(rer), p = 1, q = 1)
+    # cs1 <- corAR1(form = formula(rer))
+    cs1 <- Initialize(cs1, data = data1)
+  } else {
+    cs1 <- NULL
+  }
+  # Fit model
+  eqn1 <- paste0("lPM ~", covar)
+  lme1 <- lme(formula(eqn1),
+              random= formula(re),
+              data=data1, correlation= cs1)
+
+  # Get residuals
+  lme1b <- augment(lme1)
+
+  # format
+  t1 <- tidy(lme1, conf.int = T) %>%
+    filter(effect == "fixed", term != "(Intercept)") %>%
+    mutate(term = case_when(term == "snowbinL1m" ~ "snowbin",
+                            term == "awndL1" ~ "awnd",
+                            term == "tmaxL1" ~ "tmax",
+                            term == "tminL1" ~ "tmin",
+                            term == "prcpbinL1" ~ "prcpbin",
+                            TRUE ~ term)) %>%
+    full_join(iqrs) %>%
+    mutate(IQR = ifelse(is.na(IQR), 1, IQR),
+           estimateIQR = estimate * IQR,
+           conf.lowIQR = conf.low * IQR,
+           conf.highIQR = conf.high * IQR,
+           term1 = factor(term, levels = c("daily", "obsdiff", "srness", "timemin",
+                                           "rtypeLocalConn",  "rtypeLocal",    "rtypeOther",
+                                           "tmax" ,"tmin",  "prcpbin", "snowbin" , "awnd", "cat5smSE", "cat5smOther",
+                                           "hourly", "hourlymonth"),
+                          labels = c("Daily PM2.5", "Hourly PM2.5", "Roadiness", "Time since start",
+                                     "Local conn", "Local", "Other",
+                                     "Max Temp",  "Min Temp", "Precipitation","Snow",
+                                     "Wind", "WindDir SE", "WindDir Other", "Hour Mean", "Hour Mon Mean")),
+           type = ifelse(term %in% c("daily", "obsdiff", "srness",
+                                     "rtypeLocalConn",  "rtypeLocal",    "rtypeOther", "timemin"),
+                         "Pollution", "Meteorology"),
+           type2 = ifelse(term %in% c("prcpbin", "snowbin",
+                                      "rtypeLocalConn",  "rtypeLocal",
+                                      "rtypeOther", "cat5smSE",
+                                      "cat5smOther"), "cat", "num")) %>%
+    filter(!is.na(estimate))
+
+
+  # get intervals for variance components
+  if(intervals) {
+    print(intervals)
+    int1 <- intervals(lme1)
+    reint <- int1$reStruct
+
+
+    # bind together intervals
+    re <- bind_rows(int1$sigma, reint[[1]][1, ])
+    for(i in 2 : length(reint)) {
+      re <- bind_rows(re, reint[[i]][1, ])
+    }
+    re <- mutate(re, name = c("sigma", names(reint))) %>%
+      rename(est= `est.`)
+
+  } else {
+    sigs <- lme1$sigma
+
+    re1 <- coef(lme1$modelStruct$reStruct, unconstrained = F) %>% sqrt()
+    re1 <- re1 * sigs
+    names(re1) <- strsplit(names(re1), "\\.") %>% sapply(., function(x) x[[1]])
+
+    re1b <- c(sigs, re1)
+    re <- data.frame(est = re1b, name = c("sigma", names(re1)))
+    re <- mutate(re, est = as.numeric(est))
+  }
+
+
+  # return
+  if("corStruct" %in% names(lme1$modelStruct)) {
+    cor <- lme1$modelStruct$corStruct
+  } else {
+    cor <- NA
+  }
+
+  list(t1 = t1, re = re, cor = cor, lme1 = lme1, aug = lme1b)
+}
+
+
+```
+
+# regression?
 
 ```{r}
 
-eqn1 <- "lPM ~  daily + obsdiff + awnd + prcpbin + 
-               tmax  + tmin + rtype + 
-               cat5sm + snowbin"
-res <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID ") 
+daily <- get_lme(comparepm1, iqrs, "daily")
+hour <- get_lme(comparepm1, iqrs, "obsdiff")
+prcp <- get_lme(comparepm1, iqrs, "prcpbin")
+awnd <- get_lme(comparepm1, iqrs, "awnd")
+tmax <- get_lme(comparepm1, iqrs, "tmax")
+tmin <- get_lme(comparepm1, iqrs, "tmin")
+RH <- get_lme(comparepm1, iqrs, "RH")
+cat5sm <- get_lme(comparepm1, iqrs, "cat5sm")
+snowbin <- get_lme(comparepm1, iqrs, "snowbin")
 
-get_lme(comparepm, iqrs, eqn1)
+
+daily$t1
+hour$t1
+prcp$t1
+awnd$t1
+tmax$t1
+tmin$t1
+RH$t1
+cat5sm$t1
+snowbin$t1
 
 ```

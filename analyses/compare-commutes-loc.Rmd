@@ -33,8 +33,7 @@ library(dplyr)
 ```
 
 ```{r}
-load(here("data/commutecompare-res.RData"))
-load(here("data/MainStates1.RData"))
+load(here("data/comparedat.RData"))
 
 ```
 
@@ -45,11 +44,14 @@ load(here("data/MainStates1.RData"))
 locs <- dplyr::select(comparepm, ID, min, commute, date) %>% unique() %>%
   group_by(ID, commute) %>% summarize(date = min(date)) %>% ungroup()
 
+# get first commute and match second to first
 firstcom1 <- left_join(locs, comparepm) %>%
   arrange(ID, rdatetime) %>%
   group_by(ID, commute, date) %>%
+  # obs per commute per date
   mutate(loc = 1, cs = cumsum(loc)) 
 
+# nest by commute
 firstcom <- firstcom1 %>%
   ungroup() %>%
   dplyr::select(ID, commute, Latitude, Longitude, cs) %>%
@@ -67,6 +69,7 @@ coms <- full_join(firstcom, secondcom)
 ```
 
 ```{r}
+# function to get distances
 distfun <- function(x, y) {
   x <- as.matrix(x)
   y <- as.matrix(y)
@@ -83,6 +86,7 @@ distfun <- function(x, y) {
 
 
 ```{r}
+# add distance for each pair within commute
 for(i in 1 : nrow(coms)) {
   dat1 <- coms$data[[i]]
   loc1 <- coms$locs[[i]]
@@ -269,7 +273,3 @@ ggplot(coms3, aes(x = propcs, y = diff0pm, colour = min2)) + geom_point() +
 
 
 
-```{r}
-
-
-```
