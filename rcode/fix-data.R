@@ -3,6 +3,7 @@
 # load libraries
 library(tidyverse)
 library(here)
+library(DescTools)
 
 # load data
 load(here("data/rcomm.RData"))
@@ -133,12 +134,17 @@ rcomm2 <- group_by(rcomm2, ID, date_local, group) %>%
 shift <- 0.05 # smallest is 0.10
 rcomm <- mutate(rcomm2, lPM = log(PM + shift),
                 cat5sm = fct_relevel(cat5sm, "NW"),
-                rtype = fct_relevel(rtype, "Local"))
+                rtype = fct_relevel(rtype, "Local"),
+                hour = hour(rdatetime),
+                # through 9:59
+                rushmorn = ifelse(hour >= 6 & hour <= 9, 1, 0),
+                # through 6:59
+                rusheven = ifelse(hour >= 15 & hour <= 18, 1, 0))
 
 # ID 3 is date/commute
 rcommLM <- dplyr::select(rcomm, srness, rtype, id3, PM, daily,
                         obsdiff, ID,date_local, group, cat5sm, timemin, lPM,
-                        awndL1 , prcpbinL1 ,
+                        awndL1 , prcpbinL1 , rdatetime, rushmorn, rusheven,
                         tmaxL1, tminL1, snowbinL1m, RH )  %>%
   na.omit() %>%
   rename(awnd = awndL1 , prcpbin= prcpbinL1 ,
