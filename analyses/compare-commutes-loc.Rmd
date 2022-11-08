@@ -177,7 +177,31 @@ coms2 <- dplyr::select(coms1, cs, PM, commute, ID, rdatetime, min2) %>%
   dplyr::select(-cs) %>%
   unique()
 
-save(coms2, file = here("data/commute-loc.RData"))
+
+# by time
+# comspaired1 <- mutate(coms2, dt1 = lubridate::date(rdatetime)) %>%
+#             group_by(ID, commute, dt1) %>%
+#             mutate(start = min(rdatetime),
+#                 time = as.numeric((rdatetime - start) / 60)) %>%
+#   ungroup() %>%
+#   dplyr::select(-c(rdatetime, dt1, start)) %>%
+#   pivot_wider(names_from = min2, values_from = PM)
+# 
+
+# by proportion of commute
+comspaired <- dplyr::select(coms2, -rdatetime) %>%
+  group_by(ID, commute, min2, propcs) %>%
+  summarize(PM = mean(PM, na.rm = T)) %>%
+  ungroup() %>%
+  pivot_wider(names_from = min2, values_from = PM) %>%
+  arrange(ID, commute, propcs) %>%
+  group_by(ID, commute) %>%
+  mutate(lagsecond = dplyr::lag(second), leadsecond= dplyr::lead(second),
+         second = ifelse(is.na(second), (lagsecond + leadsecond) / 2, second)) %>%
+  dplyr::select(-c(lagsecond, leadsecond)) %>%
+  na.omit()
+
+save(coms2, comspaired, file = here("data/commute-loc.RData"))
 
 ```
 
