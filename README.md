@@ -114,7 +114,9 @@ X. roadiness-sens.Rmd: Old sensitivity analyses
 3. compare-commutes-loc.Rmd: Adjust by commute location
 
      - Input: comparedat.RData
-     - Output: data/commute-loc.RData
+     - Output: data/commute-loc.RData (coms2, comspaired)
+     
+4. compare-commutes-lm.Rmd: Regression results
      
      
      

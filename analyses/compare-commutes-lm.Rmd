@@ -177,14 +177,30 @@ get_lme <- function(data1, iqrs, covar, rer = "~timemin | IDcommute / date_local
 ```{r}
 
 daily <- get_lme(comparepm1, iqrs, "daily")
+ggplot(daily$aug, aes(x = daily, y = .resid)) + geom_point()
 hour <- get_lme(comparepm1, iqrs, "obsdiff")
+ggplot(hour$aug, aes(x = obsdiff, y = .resid)) + geom_point()
+
 prcp <- get_lme(comparepm1, iqrs, "prcpbin")
+ggplot(prcp$aug, aes(x = factor(prcpbin), y = .resid)) + geom_boxplot()
+
 awnd <- get_lme(comparepm1, iqrs, "awnd")
+ggplot(awnd$aug, aes(x = awnd, y = .resid)) + geom_point()
+
 tmax <- get_lme(comparepm1, iqrs, "tmax")
+ggplot(tmax$aug, aes(x = tmax, y = .resid)) + geom_point()
+
 tmin <- get_lme(comparepm1, iqrs, "tmin")
+ggplot(tmin$aug, aes(x = tmin, y = .resid)) + geom_point()
+
 RH <- get_lme(comparepm1, iqrs, "RH")
+ggplot(RH$aug, aes(x = RH, y = .resid)) + geom_point()
+
 cat5sm <- get_lme(comparepm1, iqrs, "cat5sm")
+ggplot(cat5sm$aug, aes(x = factor(cat5sm), y = .resid)) + geom_boxplot()
+
 snowbin <- get_lme(comparepm1, iqrs, "snowbin")
+ggplot(snowbin$aug, aes(x = factor(snowbin), y = .resid)) + geom_boxplot()
 
 
 daily$t1
