@@ -189,10 +189,19 @@ ggplot(s1, aes(x = fct_reorder(id, minmean), y = mean))  +
 ### median by day
 
 ```{r}
+
 s1b <- group_by(comparepm, ID, date1, commute) %>%
-  summarize(mean = median(PM), sd1 = sd(lPM), n = n()) %>% ungroup() %>%
-  dplyr::select(ID, date1, commute, mean) %>%
-  pivot_wider(names_from = "date1", values_from = "mean")
+  mutate(adpmd = PM / daily) %>%
+  summarize(median = median(adpmd), Q1 = quantile(adpmd, probs = 0.25),
+            Q3 = quantile(adpmd, probs = 0.75)) %>% ungroup() %>%
+  mutate( id = paste0(ID, commute)) %>% ungroup() 
+
+
+
+ggplot(s1b, aes(x = id, y = median, colour = date1))  + 
+  geom_pointrange(aes(ymin = Q1, ymax = Q3), position= position_dodge(0.4)) +
+  theme_bw() +
+    theme(axis.text.x = element_blank())
 ```
 
 Differences between day1 and day2
