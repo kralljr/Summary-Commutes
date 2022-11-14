@@ -6,9 +6,9 @@ load(here("data/rcomm2.RData"))
 rcomm1 <- rcommLM
 
 
-iqrs <- dplyr::select(rcomm1, -any_of(c("PM", "lPM", "ID", "date_local",
+iqrs <- dplyr::select(rcomm1, -any_of(c("PM", "lPM", "ID", "date_local", "rdatetime",
                                         "group",   "prcpbin", "snowbin", "rtype", "id3", "cat5sm"))) %>%
-  pivot_longer(srness : tmin) %>%
+  pivot_longer(srness : RH) %>%
   group_by(name)
 
 iqrs <- iqrs %>%
