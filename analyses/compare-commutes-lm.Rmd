@@ -39,6 +39,8 @@ load(here("data/comparedat.RData"))
 load(here("data/rcomm2.RData"))
 load(here("data/iqrs.RData"))
 load(here("data/commute-loc.RData"))
+load(here("data/vah.RData"))
+load(here("data/va24.RData"))
 
 
 # get functions for models
@@ -48,50 +50,92 @@ source(here("functions/model-funs.R"))
 
 
 ```{r}
-weath <- dplyr::select(rcomm2, date_local, awnd, prcpbin, RH, snowbin, tmax, tmin, cat5sm) %>% unique()
+# get day1/day2 info
+days <- mutate(coms2, date_local = date(rdatetime)) %>%
+               dplyr::select(date_local, min2, commute, ID) %>% unique()
 
-coms3 <- dplyr::select(coms2, -PM)
-comparepm1 <- left_join(comparepm, weath) %>%
-  dplyr::select(-c(Latitude, Longitude)) %>%
+
+hours <- group_by(coms2, commute, ID, min2) %>%
+  mutate(mindate = min(rdatetime), time_local = hour(mindate),
+         date_local= date(rdatetime)) %>%
+  ungroup() %>%
+  dplyr::select(commute, ID, min2, date_local, time_local) %>%
   unique() %>%
-  left_join(coms3) %>%
-  mutate(IDcommute = paste0(ID, commute)) %>%
-  rename(timemin = time) %>%
-  ungroup() %>%
-  group_by(IDcommute, date_local, timemin) %>%
-  mutate(propcs = mean(propcs)) %>%
-  ungroup() %>%
+  left_join(., vah0) %>%
+  dplyr::select(commute, ID, min2, obsdiff) %>%
+  pivot_wider(names_from = "min2", values_from = "obsdiff") %>%
+  mutate(obsdiff = second - first) %>%
+  dplyr::select(-c(second, first))
+
+dayPM <- left_join(days, va24) %>%
+  dplyr::select(-date_local) %>%
+  pivot_wider(names_from = "min2", values_from = "daily") %>%
+  mutate(daily = second - first) %>%
+  dplyr::select(-c(second, first))
+
+
+# get weather
+
+cweath <- dplyr::select(rcomm2, date_local, cat5sm) %>%
+  unique() %>%
+  left_join(days, .) %>% 
+  dplyr::select(-date_local) %>%
+  pivot_wider(names_from = "min2", values_from = "cat5sm") %>%
+  # comb is which change, same is whether changed
+  mutate(comb = paste0(second, first), cat5sm = ifelse(second == first, 1, 0)) %>%
+  dplyr::select(-c(first, second, comb))
+
+
+
+
+weath1 <- dplyr::select(rcomm2, date_local, awnd, prcpbin, RH, snowbin, tmax, tmin) %>% unique() %>%
+  left_join(days, .) %>% 
+  pivot_longer(awnd : tmin) %>%
+  dplyr::select(-date_local) %>%
+  pivot_wider(names_from = "min2") %>%
+  mutate(diffweath = second - first) %>%
+  dplyr::select(-c(first, second)) %>%
+  pivot_wider(values_from = diffweath) %>%
+  full_join(cweath) %>%
+  full_join(hours) %>%
+  full_join(dayPM)
+
+coms3a <- dplyr::select(comspaired, -c(first, second)) %>%
+  full_join(weath1) %>%
+  mutate(IDcommute = paste0(ID, commute))
+coms3 <- dplyr::filter(coms3a, !(ID == "GMU1001" & commute== "evening" & propcs < 6.26 & propcs >6.24))
+
+# match propcs with time
+timestart <- mutate(coms2, date = date(rdatetime)) %>%
+  group_by(commute, ID, date)%>%
+  mutate(start = min(rdatetime), min = as.numeric((rdatetime - start) / 60)) %>%
+  ungroup()%>%
+  dplyr::select(commute, ID, min2, propcs, min) %>%
   unique()
 
-# check ID
-# dplyr::select(ungroup(comparepm1), IDcommute, timemin) %>% unique() %>% View()
-# anti1 <- anti_join(coms2, comparepm)
+timestart1 <- filter(timestart, min2 == "first") %>% arrange(ID, commute, min)
+timestart2 <- filter(timestart, min2 == "second")%>% arrange(ID, commute, min)
 
-# dplyr::select(ungroup(comparepm1), IDcommute, date_local, timemin) %>% unique() %>% View()
-dplyr::select(ungroup(comparepm1), IDcommute, date_local, timemin) %>%
-  group_by(IDcommute, date_local) %>%
-  mutate(dup = duplicated(timemin)) %>%
-  filter(dup)
 ```
 
 
 
 
 ```{r}
-get_lme <- function(data1, iqrs, covar, rer = "~timemin | IDcommute / date_local",
-                    re = "~1 | IDcommute / date_local", intervals = T, corr = T) {
+get_lme <- function(data1, iqrs, covar, rer = "~propcs | IDcommute ",
+                    re = "~1 | IDcommute ", intervals = T, corr = T) {
 
   # get correlation
   if(corr) {
     #
-    cs1 <- corARMA(form = formula(rer), p = 1, q = 1)
-    # cs1 <- corAR1(form = formula(rer))
+    # cs1 <- corARMA(form = formula(rer), p = 1, q = 1)
+    cs1 <- corAR1(form = formula(rer))
     cs1 <- Initialize(cs1, data = data1)
   } else {
     cs1 <- NULL
   }
   # Fit model
-  eqn1 <- paste0("lPM ~", covar)
+  eqn1 <- paste0("diffPM ~", covar)
   lme1 <- lme(formula(eqn1),
               random= formula(re),
               data=data1, correlation= cs1)
@@ -170,47 +214,140 @@ get_lme <- function(data1, iqrs, covar, rer = "~timemin | IDcommute / date_local
 }
 
 
+
+run_all <- function(dat, covars) {
+  lmeall <- list()
+  for(i in 1 : length(covars)) {
+    res <- get_lme(dat, iqrs, covars[i], corr = F, intervals = F)
+
+    t1 <- res$t1
+    aug <- mutate(res$aug, type = covars[i]) %>%
+      rename(value = covars[i]) %>%
+      dplyr::select(ID, commute, propcs, value, .resid, type)
+    
+    lmeall[[i]] <- res$lme1
+    if(i == 1) {
+      
+      tall <- t1
+      augall <- aug
+    } else {
+      tall <- bind_rows(tall, t1)
+      augall <- bind_rows(augall, aug)
+    }
+  }
+
+  list(augall = augall, ests = tall, lmeall = lmeall)
+}
+
 ```
 
-# regression?
+
+# Explore
+
+```{r}
+ggplot(coms3, aes(x = propcs, y = diffPM, group = IDcommute)) +
+  geom_line()
+
+
+scoms3 <- group_by(coms3, IDcommute) %>% summarize(md = median(diffPM))
+ggplot(scoms3, aes(x = md)) + geom_boxplot()
+
+```
+
+# Spearman correlation
+
+Are ties an issue?
+```{r}
+lm1 <- function(dat) {
+  with(dat, cor(md, value, method = "spearman"))
+  # res1 <- with(dat, cor.test(md, value, method = "spearman"))
+  # paste0(round(res1$estimate, 2), " (", round(res1$p.value, 2), ")")
+}
+sc <- group_by(coms3, IDcommute) %>% mutate(md = median(diffPM))  %>%
+  dplyr::select(-c(propcs, diffPM)) %>%
+  unique() 
+
+sc %>% dplyr::select(IDcommute, prcpbin, snowbin, cat5sm, md) %>%
+  pivot_longer(prcpbin : cat5sm) %>%
+  group_by(name, value) %>%
+  summarize(median = median(md), IQR = IQR(md)) %>%
+  mutate(median = round(median, 2), IQR = round(IQR, 2),
+         medianIQR = paste0(median, " (", IQR, ")")) %>%
+  dplyr::select(-c(median, IQR)) %>%
+  pivot_wider(names_from = "value", values_from = "medianIQR") %>%
+  # only1
+  dplyr::filter(name != "snowbin")
+
+with(sc, wilcox.test(md ~ prcpbin))
+with(sc, wilcox.test(md ~ cat5sm))
+
+
+sc %>%  pivot_longer(awnd : daily) %>%
+  nest(data = c(ID : md, value)) %>%
+  mutate(cor1 = map(data, lm1)) %>%
+  unnest(cor1) %>%
+  dplyr::select(-data) %>%
+  dplyr::filter(!(name %in% c("prcpbin", "snowbin", "cat5sm"))) %>%
+  kable(digits = 2)
+
+coms3b <- coms3 %>% mutate(medpm = median(abs(diffPM)))
+ggplot(coms3b, aes(x = fct_reorder(IDcommute, medpm), y = abs(diffPM))) + geom_boxplot() +
+  theme_bw() +
+  theme(axis.text.x = element_blank())
+
+
+coms3 %>% dplyr::select(IDcommute, diffPM, daily) %>%
+  group_by(IDcommute) %>%
+  mutate(adiffPM = abs(diffPM - daily)) %>%
+  summarize(med = median(adiffPM), IQR = IQR(adiffPM),
+            q1 = quantile(adiffPM, probs = 0.25), 
+                        q3 = quantile(adiffPM, probs = 0.75)) %>%
+  mutate(med = round(med, 2), q1 = round(q1, 2),q3 = round(q3, 2),
+    MedianIQR = paste0(med, " (", q1, ", ", q3, ")")) %>%
+  arrange(med) %>%
+  dplyr::select(-c(med, IQR, IDcommute, q1, q3)) %>%
+  rowid_to_column() %>%
+  rename(ID = rowid) 
+  
+  
+```
+
+Spatial information (TRI, other sources) could impact, to control, we used paired analysis.
+
+Behavior not in control (follow cars, traffic) could impact
+ 
+# LMM regression
+
+
+## All
+
+- When use all, there is one extreme outlier for GMU1001/evening (remove)
+- No snow (only 1 different)
+
 
 ```{r}
 
-daily <- get_lme(comparepm1, iqrs, "daily")
-ggplot(daily$aug, aes(x = daily, y = .resid)) + geom_point()
-hour <- get_lme(comparepm1, iqrs, "obsdiff")
-ggplot(hour$aug, aes(x = obsdiff, y = .resid)) + geom_point()
 
-prcp <- get_lme(comparepm1, iqrs, "prcpbin")
-ggplot(prcp$aug, aes(x = factor(prcpbin), y = .resid)) + geom_boxplot()
-
-awnd <- get_lme(comparepm1, iqrs, "awnd")
-ggplot(awnd$aug, aes(x = awnd, y = .resid)) + geom_point()
-
-tmax <- get_lme(comparepm1, iqrs, "tmax")
-ggplot(tmax$aug, aes(x = tmax, y = .resid)) + geom_point()
-
-tmin <- get_lme(comparepm1, iqrs, "tmin")
-ggplot(tmin$aug, aes(x = tmin, y = .resid)) + geom_point()
-
-RH <- get_lme(comparepm1, iqrs, "RH")
-ggplot(RH$aug, aes(x = RH, y = .resid)) + geom_point()
-
-cat5sm <- get_lme(comparepm1, iqrs, "cat5sm")
-ggplot(cat5sm$aug, aes(x = factor(cat5sm), y = .resid)) + geom_boxplot()
-
-snowbin <- get_lme(comparepm1, iqrs, "snowbin")
-ggplot(snowbin$aug, aes(x = factor(snowbin), y = .resid)) + geom_boxplot()
+res1 <- run_all(coms3, c("daily", "obsdiff", "prcpbin", "awnd", "tmax", "tmin", "RH", 
+                  "cat5sm"))
 
 
-daily$t1
-hour$t1
-prcp$t1
-awnd$t1
-tmax$t1
-tmin$t1
-RH$t1
-cat5sm$t1
-snowbin$t1
 
+ACF(res1$lmeall[[3]], resType = "normalized", maxLag = 30) %>% plot()
+
+# check assumptions
+ggplot(res1$augall, aes(x = .resid)) + geom_histogram() + facet_wrap(~type)
+ggplot(filter(res1$augall, type %in% c("awnd", "daily", "obsdiff", "RH", "tmax", "tmin")), 
+       aes(x = value, y = .resid)) + geom_point() + facet_wrap(~type, scales = "free")
+catres <- filter(res1$augall, !(type %in% c("awnd", "daily", "obsdiff", "RH", "tmax", "tmin"))) %>%
+  mutate(value = factor(value))
+ggplot(catres, 
+       aes(x = value, y = .resid)) + geom_boxplot() + facet_wrap(~type, scales = "free")
+
+ggplot(res1$ests, aes(x = term, y = estimateIQR)) + 
+  geom_pointrange(aes(ymin = conf.lowIQR, ymax = conf.highIQR)) +
+  xlab("")+ ylab("Estimate (95% CI)") +
+  geom_hline(yintercept = 0, linetype = 2, colour = "blue") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
