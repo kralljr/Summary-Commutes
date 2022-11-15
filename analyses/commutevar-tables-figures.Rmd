@@ -27,6 +27,9 @@ load(here("figures/eda-tabfig.RData"))
 # from figure2.R
 load(here("figures/fighourly.RData"))
 
+# paired analysis
+load(here("figures/figpaired.RData"))
+
 ```
 
 # Figures
@@ -98,4 +101,15 @@ tripplot[[2]] = tripplot[[2]] + theme(axis.text.y = element_blank(),
 
 tripplot
 
+```
+
+
+## Figure `r k`. Boxplot of differences in PM2.5 between commute pairs (N=12)
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+figpaired
 ```
