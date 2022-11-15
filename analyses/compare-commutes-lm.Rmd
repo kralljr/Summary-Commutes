@@ -45,6 +45,8 @@ load(here("data/va24.RData"))
 
 # get functions for models
 source(here("functions/model-funs.R"))
+
+figloc <- "~/Dropbox/CommuteVar/figures/"
 ```
 
 
@@ -263,8 +265,8 @@ lm1 <- function(dat) {
   # res1 <- with(dat, cor.test(md, value, method = "spearman"))
   # paste0(round(res1$estimate, 2), " (", round(res1$p.value, 2), ")")
 }
-sc <- group_by(coms3, IDcommute) %>% mutate(md = median(diffPM))  %>%
-  dplyr::select(-c(propcs, diffPM)) %>%
+sc <- group_by(coms3, IDcommute) %>% mutate(adiffPM = diffPM - daily, md = median(adiffPM))  %>%
+  dplyr::select(-c(propcs, diffPM, adiffPM)) %>%
   unique() 
 
 sc %>% dplyr::select(IDcommute, prcpbin, snowbin, cat5sm, md) %>%
@@ -289,27 +291,71 @@ sc %>%  pivot_longer(awnd : daily) %>%
   dplyr::select(-data) %>%
   dplyr::filter(!(name %in% c("prcpbin", "snowbin", "cat5sm"))) %>%
   kable(digits = 2)
+```
 
+
+# Summarize
+
+```{r}
 coms3b <- coms3 %>% mutate(medpm = median(abs(diffPM)))
-ggplot(coms3b, aes(x = fct_reorder(IDcommute, medpm), y = abs(diffPM))) + geom_boxplot() +
-  theme_bw() +
-  theme(axis.text.x = element_blank())
 
 
-coms3 %>% dplyr::select(IDcommute, diffPM, daily) %>%
+coms3b2 <- coms3b %>% dplyr::select(IDcommute, diffPM, daily) %>%
   group_by(IDcommute) %>%
-  mutate(adiffPM = abs(diffPM - daily)) %>%
-  summarize(med = median(adiffPM), IQR = IQR(adiffPM),
-            q1 = quantile(adiffPM, probs = 0.25), 
-                        q3 = quantile(adiffPM, probs = 0.75)) %>%
+  summarize(med = abs(median(diffPM)), IQR = IQR(diffPM),
+            q1 = quantile(diffPM, probs = 0.25), 
+                        q3 = quantile(diffPM, probs = 0.75)) %>%
+  arrange(med)
+
+coms3b2
+summarize(coms3b2, median(med), min(med), max(med))
+
+coms3c0 <- coms3 %>% dplyr::select(IDcommute, diffPM, daily) %>%
+  group_by(IDcommute) %>%
+  mutate(diffPM = abs(diffPM - daily), medpm = median(abs(diffPM))) 
+
+
+coms3c <- coms3c0 %>%
+  summarize(med = median(diffPM), IQR = IQR(diffPM),
+            q1 = quantile(diffPM, probs = 0.25), 
+                        q3 = quantile(diffPM, probs = 0.75))
+
+summarize(coms3c, median(med), min(med), max(med))
+
+coms3c %>%
   mutate(med = round(med, 2), q1 = round(q1, 2),q3 = round(q3, 2),
     MedianIQR = paste0(med, " (", q1, ", ", q3, ")")) %>%
   arrange(med) %>%
   dplyr::select(-c(med, IQR, IDcommute, q1, q3)) %>%
   rowid_to_column() %>%
   rename(ID = rowid) 
-  
-  
+
+```
+
+
+```{r}
+coms3b <- mutate(coms3b, type = "Unadjusted")
+coms3c0 <- mutate(coms3c0, type = "Adjusted")
+
+comscom <- full_join(coms3b, coms3c0) %>%
+  group_by(IDcommute) %>%
+  mutate(medpm = mean(medpm))
+figpaired <- ggplot(coms3b, aes(x = fct_reorder(IDcommute, medpm), y = abs(diffPM))) + geom_boxplot() +
+  ylab(expression(paste("Absolute difference in PM"[2.5]," (", mu, "g/m"^3, ")", " between pairs"))) +
+  xlab("Commute pairs") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(), text = element_text(size = 12)) 
+
+
+ggplot(coms3b, aes(x = fct_reorder(IDcommute, medpm), y = abs(diffPM))) + geom_boxplot() +
+  ylab(expression(paste("Absolute difference in PM"[2.5]," (", mu, "g/m"^3, ")", " between pairs"))) +
+  xlab("Commute pairs") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90), text = element_text(size = 12)) 
+
+figpaired
+save(figpaired, file = file.path(figloc, "figpaired.RData"))
+
 ```
 
 Spatial information (TRI, other sources) could impact, to control, we used paired analysis.
