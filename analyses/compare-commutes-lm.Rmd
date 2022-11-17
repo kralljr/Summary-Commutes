@@ -76,6 +76,16 @@ dayPM <- left_join(days, va24) %>%
   dplyr::select(-c(second, first))
 
 
+# get speed
+sp <- dplyr::select(rcomm2, ID, rdatetime, mph, date) %>%
+  unique() %>%
+  left_join(coms2, .) %>%
+  group_by(commute, ID, min2) %>%
+  summarize(mph = mean(mph, na.rm = T)) %>%
+  pivot_wider(names_from = "min2",values_from = "mph") %>%
+  mutate(mph = second - first) %>%
+  dplyr::select(-c(second, first))
+
 # get weather
 
 cweath <- dplyr::select(rcomm2, date_local, cat5sm) %>%
@@ -100,7 +110,8 @@ weath1 <- dplyr::select(rcomm2, date_local, awnd, prcpbin, RH, snowbin, tmax, tm
   pivot_wider(values_from = diffweath) %>%
   full_join(cweath) %>%
   full_join(hours) %>%
-  full_join(dayPM)
+  full_join(dayPM) %>%
+  full_join(sp)
 
 coms3a <- dplyr::select(comspaired, -c(first, second)) %>%
   full_join(weath1) %>%
@@ -284,13 +295,16 @@ with(sc, wilcox.test(md ~ prcpbin))
 with(sc, wilcox.test(md ~ cat5sm))
 
 
-sc %>%  pivot_longer(awnd : daily) %>%
+sc %>%  pivot_longer(awnd : mph) %>%
   nest(data = c(ID : md, value)) %>%
   mutate(cor1 = map(data, lm1)) %>%
   unnest(cor1) %>%
   dplyr::select(-data) %>%
   dplyr::filter(!(name %in% c("prcpbin", "snowbin", "cat5sm"))) %>%
   kable(digits = 2)
+
+
+ggplot(sc, aes(x = mph, y =md)) + geom_point()
 ```
 
 
@@ -352,6 +366,8 @@ ggplot(coms3b, aes(x = fct_reorder(IDcommute, medpm), y = abs(diffPM))) + geom_b
   xlab("Commute pairs") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90), text = element_text(size = 12)) 
+
+
 
 figpaired
 save(figpaired, file = file.path(figloc, "figpaired.RData"))
