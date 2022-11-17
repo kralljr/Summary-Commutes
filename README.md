@@ -10,7 +10,7 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
     
     - Input: All GPS .csv files from the GEST-DC data loggers
     - Creates: gpslatlon.RData, one dataset of ID, time, latitude/longitude for each trip.
-    
+
 2. check-commute-data.R: Check/analyze gpslatlon.RData. (not useful for paper because not merged with PM2.5)
 
 3. unique_commutes_df.R: 
@@ -61,9 +61,16 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
     - Input: roadiness_commutes.Rdata, vah.RData (hourly averages VA PM, hourly+season, observed), va24.RData (daily PM), weather-cleaned.RData (weather data)
     - Output: rcomm.RData
     
+        
+10.5. traffic-gps.R: Get speed info from GPS latlon
+
+    - Input: gpslatlon.RData
+    - Output: speed.RData
+    
+    
 11. fix-data.R: File to fix variables based on EDA
 
-    - Input: rcomm.RData
+    - Input: rcomm.RData, speed.RData
     - Output: rcomm2.RData (includes formatted for lm)
     
 12. iqrs-weath.R: File to create IQRs for interpreting lm results

@@ -7,6 +7,8 @@ library(DescTools)
 
 # load data
 load(here("data/rcomm.RData"))
+# load speed
+load(here("data/speed.RData"))
 
 
 # convert from tenths
@@ -129,6 +131,21 @@ rcomm2 <- group_by(rcomm2, ID, date_local, group) %>%
 
 
 
+
+# merge speed
+rcomm2 <- left_join(rcomm2, speed) %>%
+  group_by(ID, date, cum1) %>%
+  mutate(lagmph = lag(mph), leadmph = lead(mph),
+         mph = ifelse(is.na(mph), (lagmph + leadmph) / 2, mph)) %>%
+  dplyr::select(-c(lagmph, leadmph)) %>%
+  group_by(ID, rdatetime, rounddate, cum1) %>%
+  # one trip over midnight causing weirdness
+  mutate(mph = mean(mph)) %>%
+  unique() %>%
+  ungroup()
+
+
+
 ################
 # Format data for analysis
 shift <- 0.05 # smallest is 0.10
@@ -142,14 +159,13 @@ rcomm <- mutate(rcomm2, lPM = log(PM + shift),
                 rusheven = ifelse(hour >= 15 & hour <= 18, 1, 0))
 
 # ID 3 is date/commute
-rcommLM <- dplyr::select(rcomm, srness, rtype, id3, PM, daily,
+rcommLM <- dplyr::select(rcomm, srness, rtype, mph, id3, PM, daily,
                         obsdiff, ID,date_local, group, cat5sm, timemin, lPM,
                         awndL1 , prcpbinL1 , rdatetime, rushmorn, rusheven,
                         tmaxL1, tminL1, snowbinL1m, RH )  %>%
   na.omit() %>%
   rename(awnd = awndL1 , prcpbin= prcpbinL1 ,
          tmax = tmaxL1, tmin = tminL1, snowbin= snowbinL1m )
-
 
 
 

@@ -13,7 +13,10 @@ iqrs <- dplyr::select(rcomm1, -any_of(c("PM", "lPM", "ID", "date_local", "rdatet
 
 iqrs <- iqrs %>%
   summarize(IQR = IQR(value)) %>%
-  mutate(IQR = ifelse(name %in% c("snowbin", "prcpbin"), 1, IQR)) %>%
+  mutate(IQR = ifelse(name %in% c("snowbin", "prcpbin"), 1, IQR),
+         # fix speed
+         IQR = ifelse(name == "mph", 10, IQR)) %>%
   rename(term = name)
+
 
 save(iqrs, file = here("data/iqrs.RData"))
