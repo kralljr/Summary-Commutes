@@ -276,7 +276,7 @@ lm1 <- function(dat) {
   # res1 <- with(dat, cor.test(md, value, method = "spearman"))
   # paste0(round(res1$estimate, 2), " (", round(res1$p.value, 2), ")")
 }
-sc <- group_by(coms3, IDcommute) %>% mutate(adiffPM = diffPM - daily, md = median(adiffPM))  %>%
+sc <- group_by(coms3, IDcommute) %>% mutate(adiffPM = diffPM - daily, md = median(diffPM))  %>%
   dplyr::select(-c(propcs, diffPM, adiffPM)) %>%
   unique() 
 
@@ -300,7 +300,7 @@ sc %>%  pivot_longer(awnd : mph) %>%
   mutate(cor1 = map(data, lm1)) %>%
   unnest(cor1) %>%
   dplyr::select(-data) %>%
-  dplyr::filter(!(name %in% c("prcpbin", "snowbin", "cat5sm"))) %>%
+  dplyr::filter(!(name %in% c("prcpbin", "snowbin", "cat5sm", "obsdiff"))) %>%
   kable(digits = 2)
 
 
