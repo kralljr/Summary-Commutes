@@ -22,13 +22,15 @@ library(forcats)
 library(lubridate)
 library(patchwork)
 
+figloc <- "~/Dropbox/CommuteVar/figures"
+
 # from roadiness-eda.Rmd
 load(here("figures/eda-tabfig.RData"))
 # from figure2.R
 load(here("figures/fighourly.RData"))
 
 # paired analysis
-load(here("figures/figpaired.RData"))
+load(file.path(figloc, "figpaired.RData"))
 
 ```
 
