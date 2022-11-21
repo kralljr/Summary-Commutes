@@ -110,9 +110,12 @@ g6 <- ggplot(rcomm1, aes(x = tmin, y = lPM)) +
 g7 <- ggplot(rcomm1, aes(x = timemin, y = lPM)) +
    geom_point() +geom_smooth() 
 
+g8 <- ggplot(rcomm1, aes(x = mph, y = lPM)) +
+   geom_point() +geom_smooth() 
+
 (g1 + g2 + g3 ) / (g4 + g5 + g6 ) 
 
-g7
+g7 + g8
 ```
 
 
@@ -156,7 +159,7 @@ rcomm1 <- group_by(rcomm1, ID, id3) %>%
 eqn1 <- "lPM ~ srness"
 res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3")
 res1rn <- res1
-# ACF(res1$lme1, resType = "normalized", maxLag = 30) %>% plot()
+ACF(res1$lme1, resType = "normalized", maxLag = 30) %>% plot()
  
 
 eqn2 <- "lPM ~ srness + awnd + prcpbin + 
@@ -193,7 +196,7 @@ plot_nocat_sens(resl, "srness")
 ```{r}
 eqn1 <- "lPM ~ rtype"
 res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3")
-# ACF(res1$lme1, resType = "normalized", maxLag = 30) %>% plot()
+ACF(res1$lme1, resType = "normalized", maxLag = 30) %>% plot()
 
 res1rt <- res1
 
@@ -206,7 +209,7 @@ res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
 
 eqn3 <- "lPM ~ rtype + daily + obsdiff"
 res3 <- get_lme(rcomm1, iqrs, eqn3, re = "~ 1| ID / id3")
-ACF(res3$lme1, resType = "normalized", maxLag = 30) %>% plot()
+# ACF(res3$lme1, resType = "normalized", maxLag = 30) %>% plot()
 
 
 eqn4 <- "lPM ~ rtype + rushmorn + rusheven" 
@@ -219,6 +222,65 @@ plot_cat_sens(resl, "rtype")
 ```
 
 
+
+## Speed 
+
+```{r}
+eval1 <- T
+```
+
+
+```{r, eval = eval1}
+eqn1 <- "lPM ~ mph"
+res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3")
+res1sp <- res1
+ACF(res1$lme1, resType = "normalized", maxLag = 30) %>% plot()
+ 
+
+eqn2 <- "lPM ~ mph + awnd + prcpbin + 
+               tmax  + tmin +  RH + 
+               cat5sm + snowbin" 
+res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+# ACF(res2$lme1, resType = "normalized", maxLag = 30) %>% plot()
+
+# doesnot run
+eqn3 <- "lPM ~ mph + obsdiff" 
+res3 <- get_lme(rcomm1, iqrs, eqn3, re = "~ 1| ID / id3")
+# ACF(res3$lme1, resType = "normalized", maxLag = 30) %>% plot()
+
+eqn3b <- "lPM ~ mph + daily" 
+res3b <- get_lme(rcomm1, iqrs, eqn3b, re = "~ 1| ID / id3")
+# ACF(res3b$lme1, resType = "normalized", maxLag = 30) %>% plot()
+
+
+eqn4 <- "lPM ~ mph + rushmorn + rusheven" 
+res4 <- get_lme(rcomm1, iqrs, eqn4, re = "~ 1| ID / id3")
+# ACF(res4$lme1, resType = "normalized", maxLag = 30) %>% plot()
+
+resl <- list(Main = res1, Weather = res2, Hourly = res3, Daily = res3b, Rush = res4)
+plot_nocat_sens(resl, "mph")
+
+```
+
+
+
+
+## Speed * Road type
+
+No role
+
+```{r, eval = eval1}
+eqn1 <- "lPM ~ mph * rtype"
+res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3")
+res1$t1 %>% dplyr::select(term, estimate, p.value, conf.low, conf.high) %>%
+  dplyr::filter(!is.na(estimate))
+# ACF(res1$lme1, resType = "normalized", maxLag = 30) %>% plot()
+ 
+
+plot_nocat_sens(resl, "mph")
+
+```
+
 ## Lags
 
 
@@ -226,7 +288,7 @@ plot_cat_sens(resl, "rtype")
 
 ### Roadiness 
 
-```{r}
+```{r, eval = eval1}
 rcommlag <- mutate(rcomm1, var = srness)
 eqn1 <- "lPM ~ var" 
 resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
@@ -247,7 +309,7 @@ plot_nocat_sens(resl, "var")
 ### Road type
 
 
-```{r}
+```{r, eval = eval1}
 rcommlag <- mutate(rcomm1, var = rtype)
 eqn1 <- "lPM ~ var" 
 resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
@@ -268,20 +330,30 @@ plot_cat_sens(resl, "var")
 
 ## Speed
 
-```{r}
+```{r, eval = eval1}
+rcommlag <- mutate(rcomm1, var = mph)
+eqn1 <- "lPM ~ var" 
+resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
+               intervals = T)
+
+rcomm0 <- rename(rcomm1, var = mph)
+eqn1 <- "lPM ~ var"
+res1 <- get_lme(rcomm0, iqrs, eqn1, re = "~ 1| ID / id3")
+resl[[12]] <- res1
+names(resl)[12] <- "main"
+
+plot_nocat_sens(resl, "var")
+
 
 
 ```
-
-## Traffic
-
 
 
 
 ## All
 
-```{r}
-eqnA <- "lPM ~ srness + rtype"
+```{r, eval = eval1}
+eqnA <- "lPM ~ srness + rtype + mph"
 resA <- get_lme(rcomm1, iqrs, eqnA, re = "~ 1| ID / id3") 
 
 # still autocorr
@@ -308,23 +380,24 @@ ggplot(long, aes(x = value, y = .resid)) +
 ```
 
 
-```{r}
+```{r, eval = eval1}
 resl <- list(Main = res1rt, All = resA)
 plot_cat_sens(resl, "rtype")
-```
 
-```{r}
 
 resl <- list(Main = res1rn, All = resA)
 plot_nocat_sens(resl, "srness")
+
+resl <- list(Main = res1sp, All = resA)
+plot_nocat_sens(resl, "mph")
 ```
 
 
 
 
-```{r}
+```{r, eval = eval1}
 # Get residuals
-save(resA, res1rn, res1rt, file = here("results/main-res.RData"))
+save(resA, res1rn, res1rt, res1sp, file = here("results/main-res.RData"))
 ```
 
 
