@@ -54,13 +54,13 @@ nrow(rcomm)
 unique(rcomm$ID) %>% length()
 
 # total commutes
-select(rcomm, ID, date_local, group) %>% unique() %>% nrow()
+dplyr::select(rcomm, ID, date_local, group) %>% unique() %>% nrow()
 
 # person-days
-select(rcomm, ID, date_local) %>% unique() %>% nrow()
+dplyr::select(rcomm, ID, date_local) %>% unique() %>% nrow()
 
 # days
-select(rcomm, date_local) %>% unique() %>% nrow()
+dplyr::select(rcomm, date_local) %>% unique() %>% nrow()
 
 # total minutes of obs per commuter
 g1 <- group_by(rcomm, ID) %>% summarize(n=n()) %>% ungroup() %>% arrange(n)
@@ -72,7 +72,7 @@ g1 %>%
 summarize(g1, min(n), max(n), median(n), mean(n))
 
 # commutes per commuter
-select(rcomm, ID, date_local, group) %>% unique() %>% group_by(ID) %>% count() %>%
+dplyr::select(rcomm, ID, date_local, group) %>% unique() %>% group_by(ID) %>% count() %>%
   ungroup() %>% rename(commutesobs= n) %>% count(commutesobs) %>% 
   mutate(perc = round(100 * n/sum(n), 1)) %>% kable()
 ```
@@ -151,12 +151,12 @@ sum1%>%
 The average minute PM2.5 across participants was 5.5 mug/m3 ranging from 0 to 50.2 mug/m3.  In general, there was greater variability between participants than within a participant over the commutes, though variability was great for some participants.
 
 ```{r}
-select(sum1, ID, lmean, mean,sd) %>% pivot_longer(-ID) %>%
+dplyr::select(sum1, ID, lmean, mean,sd) %>% pivot_longer(-ID) %>%
   group_by(name) %>% summarize(med = median(value), mean = mean(value), sd = sd(value)) %>%
   kable(digits =2)
 
 
-select(sum1, ID, min, max) %>%  summarize(min = min(min), max = max(max))
+dplyr::select(sum1, ID, min, max) %>%  summarize(min = min(min), max = max(max))
 ```
 
 ## Violin plots
@@ -173,7 +173,7 @@ ggplot(rcomm, aes(y = ID, x  = lPM)) + geom_violin()
 rcomm1 <- group_by(rcomm, ID) %>% mutate(medl = median(lPM, na.rm = T), n = n()) %>%
   ungroup()
 rcomm1 <- arrange(rcomm1, medl)
-ns <- select(rcomm1, ID, medl, n) %>% unique()
+ns <- dplyr::select(rcomm1, ID, medl, n) %>% unique()
 boxplot1 <- ggplot(rcomm1, aes(y = fct_reorder(ID, medl), x  = lPM)) + geom_boxplot() +#outlier.shape = NA
    ylab(expression(paste("Minutes observed per participant"))) +
   xlab((expression(paste("log PM"[2.5], " (log ", mu, "g/m"^3, ")")))) +
@@ -216,7 +216,7 @@ ggplot(sumdat, aes(x = sdPM, y = ID, colour = ID)) +
 ```
 
 
-# Roadiness/Road type
+# Roadiness/Road type/Speed
 
 
 2. Possible misclassification 
@@ -233,17 +233,17 @@ perc <- group_by(rcomm, ID) %>%
   mutate(perc = n / sum(n) * 100, perc = round(perc, 1),
          rtype = factor(rtype, levels = c("Local", "LocalConn",
                                           "High/SecHigh", "Other"))) %>%
-  select(-n) %>%
+  dplyr::select(-n) %>%
   arrange(rtype, rtype, desc(perc)) 
 
-perc %>% kable()
+# perc %>% kable()
 
 
-perc1 <- filter(perc, !(rtype %in% c("Local", "Other"))) %>%
-  mutate(rtype = as.character(rtype),
-         rtype = ifelse(rtype != "LocalConn", "high", rtype)) %>%
-  pivot_wider(names_from = "rtype", values_from = "perc") 
-filter(perc1, is.na(LocalConn) | is.na(high)) %>% dim()
+# perc1 <- filter(perc, !(rtype %in% c("Local", "Other"))) %>%
+#   mutate(rtype = as.character(rtype),
+#          rtype = ifelse(rtype != "LocalConn", "high", rtype)) %>%
+#   pivot_wider(names_from = "rtype", values_from = "perc") 
+# filter(perc1, is.na(LocalConn) | is.na(high)) %>% dim()
 
 roadtype1 <- ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) + 
   geom_tile() +
@@ -278,7 +278,7 @@ pmtile <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = lPM2)) +
         axis.ticks.y = element_blank(), legend.position = c(.75, .25))
 
 
-pmtile
+
 tripplot <- roadtype2 + pmtile
 tripplot[[2]] = tripplot[[2]] + theme(axis.text.y = element_blank(),
                                         axis.ticks.y = element_blank(),
@@ -292,7 +292,7 @@ Not much difference if take mode over commute type
 
 ```{r}
 
-select(rcomm, ID, date_local, group, rtypeMode) %>% unique() %>%
+dplyr::select(rcomm, ID, date_local, group, rtypeMode) %>% unique() %>%
   count(rtypeMode) %>% mutate(perc = 100 * n/sum(n), perc = round(perc, 1)) %>%
   kable()
 ```
@@ -314,6 +314,45 @@ ggplot(rcomm, aes(x = srness)) + geom_histogram(bins = 20)
 g1 <- group_by(rcomm, ID) %>% summarize(mean = mean(srness), sd = sd(srness), min = min(srness), max = max(srness))  %>% ungroup()
 g1 %>% kable(digits = 2)
 
+```
+
+# Speed
+
+```{r}
+s1 <- summarize(rcomm, mean = mean(mph), sd = sd(mph), min = min(mph), max= max(mph),
+                med = median(mph), IQR = IQR(mph))
+s1 %>%
+  kable(digits = 2)
+
+# ggplot(rcomm, aes(x = mph)) + geom_boxplot()
+# by ID
+g1 <- group_by(rcomm, ID) %>% summarize(mean = mean(mph), sd = sd(mph), min = min(mph), max= max(mph),
+                med = median(mph), IQR = IQR(mph))  %>% ungroup()
+g1 %>% kable(digits = 2)
+
+speed1 <- mutate(rcomm1, speed = case_when(mph < 1 ~ "stop", 
+                                           mph >= 1 & mph < 10 ~ "slow",
+                                           mph >= 10 & mph < 30 ~ "local",
+                                           mph >= 30 & mph < 50 ~ "mod",
+                                           mph >= 50 ~ "hwy"))
+
+speedtile <- ggplot(speed1, aes(x = timemin, y = id2, fill = speed)) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
+  scale_fill_colorblind(name = "Speed (mph)") +
+  #scale_fill_gradient(name = "Speed (mph)", low = "#FFFF33", high = "#FF3333") +
+  theme_bw() +
+  theme(text = element_text(size=12), axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position  = c(.75, .25))
+
+speedtile
+
+
+dplyr::select(rcomm1, id2, ID, timemin) %>%
+  group_by(ID, id2) %>%
+  summarize(maxt = max(timemin)) %>%
+  unique() %>%
+  arrange(desc(maxt))
 ```
 
 # Weather
@@ -363,7 +402,7 @@ ggplot(weather, aes(x = value)) +geom_histogram(bins = 10) +
 *Snow and precipation: binary*
 
 ```{r}
-snowptab <- select(weather1, date_local, ID, contains("snowbin"), contains("prcpbin"), -windsnow) %>%
+snowptab <- dplyr::select(weather1, date_local, ID, contains("snowbin"), contains("prcpbin"), -windsnow) %>%
   pivot_longer(-c("ID", "date_local")) %>%
   group_by(name) %>%
   count(value) %>% mutate(perc = round(100* n/sum(n), 1),
@@ -416,7 +455,7 @@ ggplot(weatherb, aes(x = value)) +geom_histogram(bins = 10) +
 *Snow and precipation: binary*
 
 ```{r}
-select(weather1b, date_local, ID, group, contains("snowbin"), contains("prcpbin"), -windsnow) %>%
+dplyr::select(weather1b, date_local, ID, group, contains("snowbin"), contains("prcpbin"), -windsnow) %>%
   pivot_longer(-c("ID", "group", "date_local")) %>%
   group_by(name) %>%
   count(value) %>% mutate(perc = round(100* n/sum(n), 1)) %>% kable()
@@ -427,7 +466,7 @@ select(weather1b, date_local, ID, group, contains("snowbin"), contains("prcpbin"
 ### Wind direction
 
 ```{r}
-winddir <- select(rcomm, ID, date_local, cat2sm, cat5sm, wdf2, wdf5) %>% unique()
+winddir <- dplyr::select(rcomm, ID, date_local, cat2sm, cat5sm, wdf2, wdf5) %>% unique()
 ggplot(winddir, aes(x = cat5sm)) + geom_bar()
 ggplot(winddir, aes(x = cat2sm)) + geom_bar()
 
@@ -498,7 +537,7 @@ Possible multiple obs of same commute:
 # Daily PM
 
 ```{r}
-dates <- select(rcomm, date_local) %>% unique()
+dates <- dplyr::select(rcomm, date_local) %>% unique()
 if(nrow(dates) != 38) {
   stop("Incorrect dates: fix rcomm dates here")
 }
@@ -523,11 +562,11 @@ summarize(va24, mean(daily), sd(daily), min(daily), max(daily))
 
 
 ```{r, eval = T}
-part <- select(rcomm, ID) %>% unique() %>%
+part <- dplyr::select(rcomm, ID) %>% unique() %>%
   mutate(id = tolower(ID))
 load("~/Documents/gestdc-data/gestdc-merged.RData")
 
-dat <- select(dat, id, age : numchildren)
+dat <- dplyr::select(dat, id, age : numchildren)
 
 dat1 <- left_join(part, dat) %>%
   mutate(Children = ifelse(numchildren == 0,
@@ -549,7 +588,7 @@ ords <- c("Asian", "White only", "Other/Did not specify",
           "Some graduate school",
           "Graduate school degree or post-graduate degree",
           "Yes","No",  "None",  "1+")
-demo <- select(dat1, id, Race, Ethnicity, Education, GMUstudent, Employed, Children) %>%
+demo <- dplyr::select(dat1, id, Race, Ethnicity, Education, GMUstudent, Employed, Children) %>%
   pivot_longer(-id) %>%
   na.omit() %>%
   group_by(name) %>%
