@@ -11,8 +11,10 @@ load(here("data/rcomm2.RData"))
 # load GPS
 load(here("data/tripdata.RData"))
 
-# remove PA
-tripdata1 <- filter(tripdata, ID != "GMU1026") %>%
+tripdata1 <- tripdata %>%
+  # remove PA
+
+ # filter(., ID != "GMU1026") %>%
   mutate(hr = as.numeric(substr(trip_total_time, 1, 2)),
          min = as.numeric(substr(trip_total_time, 4, 5)),
          timetotal = hr * 60 + min) %>%
@@ -48,10 +50,12 @@ cols <- brewer.pal(8, "Dark2") %>% rep(4)
 
 
 # downsampled
-t1 <- group_by(tripdata1, ID, Trip) %>%
+t1 <- tripdata1 %>%
+  mutate(date = date(datetime)) %>%
+  group_by(., date, ID, Trip) %>%
   mutate(row = row_number()) %>%
-  filter(row %% 100 == 0) %>%
-  select(ID, Longitude, Latitude) %>%
+  filter(row %% 20 == 0) %>%
+  dplyr::select(ID, Longitude, Latitude) %>%
   as.data.frame()
 
 g2 <- ggplot() +
@@ -62,7 +66,7 @@ g2 <- ggplot() +
   theme(legend.position = "none") +
   xlab("Longitude") + ylab("Latitude")
 # ggsave(g2, file = here("plots/gestdc-commutes-ds.png"), width = 4, height = 4, units = "in")
-
+g2
 
 
 
