@@ -6,7 +6,7 @@ get_lme <- function(data1, iqrs, eqn1, rer = "~timemin | ID / id3",
   # get correlation
   if(corr) {
     #
-    cs1 <- corARMA(form = formula(rer), p = 1, q = 1)
+    #cs1 <- corARMA(form = formula(rer), p = 1, q = 1)
     cs1 <- corAR1(form = formula(rer))
     cs1 <- Initialize(cs1, data = data1)
   } else {
