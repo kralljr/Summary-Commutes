@@ -1,0 +1,128 @@
+---
+title: 'Mass-time ratio'
+author: "Jenna Krall"
+date: "10/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(knitr)
+library(here)
+library(lme4)
+library(broom.mixed)
+library(gtools)
+library(psychometric)
+library(ggthemes)
+library(nlme)
+library(forcats)
+library(patchwork)
+library(RColorBrewer)
+# library(lmeInfo)
+
+```
+
+
+```{r}
+# load data
+load(here("data/rcomm2.RData"))
+
+
+# load iqrs
+load(here("data/iqrs.RData"))
+
+# get functions for models
+source(here("functions/model-funs.R"))
+
+
+rcomm1 <- rcommLM
+
+```
+
+
+```{r}
+rcommU <- mutate(rcomm1, qsrness = quantcut(srness), qmph = quantcut(mph)) %>%
+  dplyr::select(rtype, qsrness, qmph, ID, PM) 
+
+levrness <- levels(rcommU$qsrness)
+levqmph <- levels(rcommU$qmph)
+levrtype <- levels(rcommU$rtype)[rev(c(2, 4, 3, 1))]
+qs <- paste0("Q", seq(1, 4))
+
+rcommU2 <- rcommU %>%
+  mutate(qsrness = factor(qsrness, levels = levrness, labels = qs),
+         qmph = factor(qmph, levels = levqmph, labels = qs),
+         rtype = factor(rtype, levels = levrtype)) %>%
+  pivot_longer(rtype : qmph)%>%
+  group_by(name, ID, value) %>%
+  summarize(sPM = sum(PM), n= n()) %>%
+  ungroup() %>%
+  group_by(name, ID) %>%
+  mutate(tsPM = sum(sPM), tn= sum(n)) %>%
+  mutate(mtratio= (sPM / tsPM) / (n / tn),
+         name = case_when(name == "qmph" ~ "Speed (mph)",
+                          name == "qsrness" ~ "Roadiness",
+                          name == "rtype" ~ "Road type")) 
+  
+
+masstime <- ggplot(rcommU2, aes(y = value, x = mtratio)) + 
+  xlab("Mass-time ratio") + ylab("") + 
+  geom_boxplot() + #outlier.shape = NA
+  geom_vline(xintercept = 1, col = "blue", linetype = 2) +
+    facet_wrap(~name, scales = "free", ncol = 1) +
+  theme_bw() +
+  theme(text = element_text(size = 12))
+
+masstime
+```
+
+## Bootstrapping
+
+```{r, eval = T,cache = T}
+set.seed(1059)
+bssfuninner <- function(dat) {
+  seq1 <- seq(1, nrow(dat))
+  samps <- sample(seq1, nrow(dat), replace = T)
+  dat1 <- as.data.frame(dat[samps, ])
+  mean(dat1$mtratio)
+}
+
+bssfun <- function(dat) {
+  replicate(1000, bssfuninner(dat))
+}
+
+d1 <- dplyr::select(rcommU2, name, ID, value, mtratio) %>%
+  group_by(name, value) %>%
+  mutate(mean = mean(mtratio)) %>%
+  ungroup() %>%
+  nest(data = c(ID, mtratio)) %>%
+  mutate(bs1 = map(data, ~bssfun(dat = .))) %>%
+  dplyr::select(-data) %>%
+  unnest(bs1) %>%
+  group_by(name, value, mean) %>%
+  summarize(lb = quantile(bs1, probs = c(0.025)),
+         ub = quantile(bs1, probs = c(0.975)),
+         med = quantile(bs1, probs = c(0.5)))
+```
+
+
+```{r}
+masstime2 <- ggplot(d1, aes(x = med, y = value)) +
+  geom_pointrange(aes(xmin = lb, xmax = ub)) +
+    xlab("Mass-time ratio") + ylab("") + 
+  geom_vline(xintercept = 1, col = "blue", linetype = 2) +
+    facet_wrap(~name, scales = "free_y", ncol = 1) +
+  theme_bw() +
+  theme(text = element_text(size = 12))
+masstime2 
+```
+
+
+```{r}
+save(masstime, masstime2, file = here("results/masstime.RData"))  
+```
