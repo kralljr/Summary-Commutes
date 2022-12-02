@@ -58,7 +58,7 @@ rcommU2 <- rcommU %>%
   mutate(qsrness = factor(qsrness, levels = levrness, labels = qs),
          qmph = factor(qmph, levels = levqmph, labels = qs),
          rtype = factor(rtype, levels = levrtype)) %>%
-  pivot_longer(rtype : qmph)%>%
+  pivot_longer(rtype : qmph) %>%
   group_by(name, ID, value) %>%
   summarize(sPM = sum(PM), n= n()) %>%
   ungroup() %>%
