@@ -12,6 +12,8 @@ knitr::opts_chunk$set(echo = F, warning = F, message = F)
 ```{r}
 # libraries
 library(tidyverse)
+library(gtools)
+
 library(knitr)
 library(here)
 library(lme4)
