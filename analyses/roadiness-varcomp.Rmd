@@ -91,7 +91,7 @@ levqmph <- levels(rcommU$qmph)
 levrtype <- levels(rcommU$rtype)[rev(c(2, 4, 3, 1))]
 qs <- paste0("Q", seq(1, 4))
 
-rcommU2 <- rcommU %>%
+icc <- rcommU %>%
   mutate(qsrness = factor(qsrness, levels = levrness, labels = qs),
          qmph = factor(qmph, levels = levqmph, labels = qs),
          rtype = factor(rtype, levels = levrtype)) %>%
@@ -108,7 +108,8 @@ rcommU2 <- rcommU %>%
                           name == "rtype" ~ "Road type")) %>%
   rename(`Road feature` = name, Value = value, ICC = icc)
 
-kable(rcommU2, digits = 2)
+save(icc, file = here("results/icc.RData"))
+kable(icc, digits = 2)
 
 # check
 # lme1 <- lme(ilPM ~ 1, random = ~1 | ID, data = rcommU$data[[2]])
@@ -155,7 +156,7 @@ ggplot(resA$re, aes(x = est, y = name)) +
 
 ## ICC
 
-```{r}
+```{r, eval = F}
 # ID, id3, rand
 # btw vs. within
 # id vs all
