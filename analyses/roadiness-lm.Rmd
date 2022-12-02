@@ -161,6 +161,9 @@ res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3")
 res1rn <- res1
 ACF(res1$lme1, resType = "normalized", maxLag = 30) %>% plot()
  
+ggplot(res1$re, aes(x = est, y = name)) + 
+  geom_pointrange(aes(xmin = lower, xmax = upper )) +
+  xlab("Estimate") + ylab("")
 
 eqn2 <- "lPM ~ srness + awnd + prcpbin + 
                tmax  + tmin +  RH + 
@@ -198,6 +201,9 @@ eqn1 <- "lPM ~ rtype"
 res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3")
 ACF(res1$lme1, resType = "normalized", maxLag = 30) %>% plot()
 
+ggplot(res1$re, aes(x = est, y = name)) + 
+  geom_pointrange(aes(xmin = lower, xmax = upper )) +
+  xlab("Estimate") + ylab("")
 res1rt <- res1
 
 eqn2 <- "lPM ~ rtype + awnd + prcpbin + 
@@ -236,6 +242,9 @@ res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3")
 res1sp <- res1
 ACF(res1$lme1, resType = "normalized", maxLag = 30) %>% plot()
  
+ggplot(res1$re, aes(x = est, y = name)) + 
+  geom_pointrange(aes(xmin = lower, xmax = upper )) +
+  xlab("Estimate") + ylab("")
 
 eqn2 <- "lPM ~ mph + awnd + prcpbin + 
                tmax  + tmin +  RH + 
