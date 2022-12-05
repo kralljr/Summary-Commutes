@@ -486,9 +486,9 @@ catweath <- bind_rows(snowptab, winddirt)
 ```
 
 ```{r}
-datdir <- rename(winddir, dir = wdf5)
-winddir1 <- plot.windrose(datdir)
-winddir1 
+winddir1 <- rename(winddir, dir = wdf5)
+plot.windrose(winddir1)
+
 ```
 
 
