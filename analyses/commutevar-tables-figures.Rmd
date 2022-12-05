@@ -32,38 +32,45 @@ load(here("figures/fighourly.RData"))
 # paired analysis
 load(file.path(figloc, "figpaired.RData"))
 
+# masstime
+load(here("results/masstime.RData"))
+
+# icc
+load(here("results/icc.RData"))
+
+# lm res
+
+load(here("results/lmfig.RData"))
+
 ```
 
-# Figures
+
+
+
+
+# Tables
 ```{r}
 k <- 1
 
 ```
 
 
-## Figure `r k`. Distributions of personal in-vehicle PM$_{2.5}$ exposures ($\mu$g/m$^3$) for each participant (N=25) on the natural log scale.
+## Table `r k`. Intraclass correlations (ICC) comparing between-participant to within-participant variability by levels of road features.
 
 ```{r}
 k <- k + 1
 ```
 
 ```{r}
-rcomm1 <- boxplot1[[2]]
-ns <- boxplot1[[3]]
-
-dates <- select(rcomm1, date) %>% unique() %>% rename(date_local = date)
-boxplot1 <- ggplot(rcomm1, aes(y = fct_reorder(ID, medl), x  = PM)) + geom_boxplot() +#outlier.shape = NA
-   ylab(expression(paste("Minutes observed per participant"))) +
-  xlab((expression(paste("PM"[2.5], " (", mu, "g/m"^3, ")")))) +
-  scale_x_continuous(trans = "log", breaks = c(0.5, 3, 20)) +
-  theme_bw() +
-  scale_y_discrete(breaks = ns$ID, labels = ns$n) +
-  theme(text = element_text(size = 12))
-boxplot1 
-
+kable(icc, digits = 2)
 ```
 
 
+# Figures
+```{r}
+k <- 1
+
+```
 
 
 
@@ -106,7 +113,7 @@ tripplot
 ```
 
 
-## Figure `r k`. Boxplot of differences in PM2.5 between commute pairs (N=12)
+## Figure `r k`. Boxplot of differences in PM$_{2.5}$ between commute pairs (N=12)
 
 ```{r}
 k <- k + 1
@@ -114,4 +121,46 @@ k <- k + 1
 
 ```{r}
 figpaired
+```
+
+
+
+## Figure `r k`. Mean (95% confidence intervals) mass-time ratio of PM$_{2.5}$ by levels of road features.  
+
+```{r}
+k <- k + 1
+```
+
+
+```{r}
+masstime2
+```
+
+
+
+
+## Figure `r k`. Associations of road type with in-vehicle PM$_{2.5}$ concentrations from linear mixed models.  Results are reported as the change in log $\mu$g/m$^3$ comparing travelling on highways, local connecting roads, and ramps/tunnels to local roads.  Results include main models as well as models adjusted for meteorology, ambient PM$_{2.5}$, and rush hour commutes.
+
+```{r}
+k <- k + 1
+```
+
+
+```{r}
+fig5
+```
+
+
+
+
+## Figure `r k`. Associations of speed and roadiness with in-vehicle PM$_{2.5}$ concentrations from linear mixed models.  Results are reported as the change in log $\mu$g/m$^3$ for an interquartile (IQR) increase in speed or roadiness.   Results include main models as well as models adjusted for meteorology, ambient PM$_{2.5}$, and rush hour commutes.
+ 
+
+```{r}
+k <- k + 1
+```
+
+
+```{r}
+fig6
 ```

@@ -57,7 +57,8 @@ qs <- paste0("Q", seq(1, 4))
 rcommU2 <- rcommU %>%
   mutate(qsrness = factor(qsrness, levels = levrness, labels = qs),
          qmph = factor(qmph, levels = levqmph, labels = qs),
-         rtype = factor(rtype, levels = levrtype)) %>%
+         rtype = factor(rtype, levels = levrtype,
+                        labels = c("Local", "LocalConn", "Ramp/Tunnel", "Highway"))) %>%
   pivot_longer(rtype : qmph) %>%
   group_by(name, ID, value) %>%
   summarize(sPM = sum(PM), n= n()) %>%

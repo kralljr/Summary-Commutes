@@ -22,6 +22,7 @@ library(forcats)
 library(lubridate)
 library(patchwork)
 
+source(here("rcode/windrose.R"))
 
 # from roadiness-eda.Rmd
 load(here("figures/eda-tabfig.RData"))
@@ -34,6 +35,9 @@ load(here("results/supp-plots.RData"))
 
 # gps plot data
 load(here("results/gpsplotdata.RData"))
+
+# masstime
+load(here("results/masstime.RData"))
 
 ```
 
@@ -87,6 +91,35 @@ k <- 1
 
 
 
+## Figure `r k`. Distributions of personal in-vehicle PM$_{2.5}$ exposures ($\mu$g/m$^3$) for each participant (N=25) on the natural log scale.
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+rcomm1 <- boxplot1[[2]]
+ns <- boxplot1[[3]]
+
+dates <- dplyr::select(rcomm1, date) %>% unique() %>% 
+  rename(date_local = date)
+rcomm2 <- rcomm1 %>%
+  mutate(PM = PM + 0.01)
+boxplot1 <- ggplot(rcomm2, aes(y = fct_reorder(ID, medl), x  = PM)) + geom_boxplot() +#outlier.shape = NA
+   ylab(expression(paste("Minutes observed per participant"))) +
+  xlab((expression(paste("PM"[2.5], " (", mu, "g/m"^3, ")")))) +
+  scale_x_continuous(trans = "log", breaks = c(0.5, 3, 20)) +
+  theme_bw() +
+  scale_y_discrete(breaks = ns$ID, labels = ns$n) +
+  theme(text = element_text(size = 12))
+boxplot1 
+
+```
+
+
+
+
+
 
 ## Figure S`r k`. Distributions of daily ambient PM$_{2.5}$ ($\mu$g/m$^3$) and hourly PM$_{2.5}$ ($\mu$g/m$^3$) for days of observation (N=38)
 
@@ -101,7 +134,7 @@ va24 <- dailypm[[2]]
 rcomm1 <- boxplot1[[2]]
 ns <- boxplot1[[3]]
 
-dates <- select(rcomm1, date) %>% unique() %>% rename(date_local = date)
+dates <- dplyr::select(rcomm1, date) %>% unique() %>% rename(date_local = date)
 obsdiff0 <- fighourly[[2]]
 obsdiff <- left_join(dates, obsdiff0)
 alps <- fighourly[[3]] - 0.2
@@ -129,7 +162,7 @@ dhour <- bind_rows(obsdiff1, va241) %>%
 ```{r}
 fighourly <- ggplot() +
   geom_boxplot(data = dhour, aes(x = factor(type2), y = pm, colour = type)) +
-  geom_vline(xintercept = 1.5, colour = "grey20", size = 1) +
+  geom_vline(xintercept = 1.5, colour = "grey20", linewidth = 1) +
   ylab(expression(paste("PM"[2.5], " (", mu, "g/m"^3, ")"))) +#, #"\nrelative to daily average"))) +
   xlab("") +
   scale_color_manual(values =c(1, cols[1]), guide = "none") +
@@ -151,7 +184,8 @@ k <- k + 1
 ```
 
 ```{r}
-winddir1
+plot.windrose(winddir1)
+
 ```
 
 
@@ -191,11 +225,12 @@ createcap <- function(x) {
      sapply(., function(y) paste(y, collapse = " "))
 }
 
-sr1 <- createcap(labs1$subregion)
 
 labs1 <- dplyr::select(MainStates1, long, lat, region, subregion) %>%
   group_by(region, subregion) %>% 
   summarize(long = mean(long), lat = mean(lat))
+sr1 <- createcap(labs1$subregion)
+
 labs <- labs1 %>%
   ungroup() %>%
   mutate(
@@ -226,4 +261,16 @@ g2 <- ggplot() +
   theme(legend.position = "none") +
   xlab("Longitude") + ylab("Latitude") 
 g2
+```
+
+
+## Figure S`r k`. Distributions of mass-time ratio of PM$_{2.5}$ by levels of road features.  
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+masstime
+
 ```

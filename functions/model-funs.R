@@ -140,18 +140,24 @@ plot_cat_sens <- function(reslist, myterm) {
     }
   }
   lista <- mutate(lista, name = factor(name, levels = names(reslist)),
-                  term = substring(term, nc + 1))
+                  term = substring(term, nc + 1),
+                  term = factor(term, levels = rev(c("High/SecHigh","Other", "LocalConn")),
+                                labels = rev(c("Highway", "Ramp/Tunnel","LocalConn"))))
 
   cols <- rep(brewer.pal(8, "Dark2"), 2)
+  lt <- rep(c(1, 1, 1, 1), 4)
+  sh <- rep(c(15 : 18), 4)
   g1 <- ggplot(lista, aes(y = term, x = estimate)) +
-    geom_pointrange(aes(xmin = conf.low, xmax = conf.high, colour = name),
+    geom_pointrange(aes(xmin = conf.low, xmax = conf.high, shape = name, linetype = name, colour = name),
                     position = position_dodge(0.2)) +
-    scale_colour_manual(values = cols) +
+    scale_colour_manual(values = cols, name = "Model") +
+    scale_shape_manual(name = "Model", values= sh) +
+    scale_linetype_manual(name = "Model", values = lt) +
     geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
-    xlab("") +
-    ylab(expression(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ") compared to reference"))) +
+    ylab("") +
+    xlab(expression(atop(paste("Change in log PM"[2.5]," (log ",mu,"g/m"^3, ")"), "compared to local roads"))) +
     theme_bw() +
-    theme(text = element_text(size = 12))
+    theme(text = element_text(size = 12), legend.position = "right")
   g1
 
 
@@ -176,7 +182,7 @@ plot_cat <- function(res) {
     scale_colour_manual(values = cols,  guide = "none") +
     geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
     xlab("") +
-    ylab(expression(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ") compared to reference"))) +
+    ylab(expression(atop(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ")"), "compared to reference"))) +
     theme_bw() +
     theme(text = element_text(size = 12)) + facet_wrap(~type2, scales = "free_y", ncol = 1)
 
@@ -234,9 +240,63 @@ plot_nocat_sens <- function(reslist, myterm) {
     geom_pointrange(aes(xmin = conf.lowIQR, xmax = conf.highIQR)) +
     geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
     xlab("") +
-    ylab(expression(atop(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ")" ), " per IQR increase"))) +
+    ylab(expression(atop(paste("Change in log PM"[2.5]," (log ",mu,"g/m"^3, ")" ), " per IQR increase"))) +
     theme_bw() +
     theme(text = element_text(size = 12))
+
+  g2
+
+}
+
+
+
+
+
+plot_nocat_sens2 <- function(reslist, myterm, reslist2, myterm2) {
+  list1 <- lapply(reslist, function(x) filter(x$t1, term == myterm))
+  cols <- brewer.pal(8, "Dark2")
+
+  for(i in 1 : length(list1)) {
+
+    list1[[i]] <- mutate(list1[[i]], name = names(reslist)[i])
+    if(i == 1) {
+      lista <- list1[[i]]
+    } else {
+      lista <- bind_rows(lista, list1[[i]])
+    }
+
+  }
+  lista1 <- mutate(lista, name = factor(name, levels = names(reslist)))
+
+
+  list1 <- lapply(reslist2, function(x) filter(x$t1, term == myterm2))
+
+  for(i in 1 : length(list1)) {
+
+    list1[[i]] <- mutate(list1[[i]], name = names(reslist2)[i])
+    if(i == 1) {
+      lista <- list1[[i]]
+    } else {
+      lista <- bind_rows(lista, list1[[i]])
+    }
+
+  }
+  lista <- mutate(lista, name = factor(name, levels = names(reslist2)))
+
+  lista2 <- full_join(lista1, lista) %>%
+    mutate(term = factor(term, levels = c("mph", "srness"),
+                         labels = c("Speed (mph)", "Roadiness")))
+  g2 <- ggplot(lista2, aes(y = term, x = estimateIQR)) +
+    geom_pointrange(aes(xmin = conf.lowIQR, xmax = conf.highIQR,
+                    colour = name, shape = name, linetype = name), position = position_dodge(0.2)) +
+    scale_colour_manual(values = cols, name = "Model") +
+    scale_shape_manual(name = "Model", values = c(15 : 18)) +
+    scale_linetype_manual(name = "Model", values = c(1, 1, 1, 1)) +
+    geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
+    ylab("") +
+    xlab(expression(atop(paste("Change in log PM"[2.5]," (log ",mu,"g/m"^3, ")" ), " per IQR increase"))) +
+    theme_bw() +
+    theme(text = element_text(size = 12), legend.position = "right")
 
   g2
 
@@ -272,7 +332,7 @@ plot_nocatALL <- function(t1) {
     xlab("") +
     ylab(expression(atop(paste("Change in PM"[2.5]," (",mu,"g/m"^3, ")" ), " per IQR increase"))) +
     theme_bw() +
-    theme(text = element_text(size = 12), legend.position = "top") +
+    theme(text = element_text(size = 12), legend.position = "right") +
     facet_wrap(~term1, scales = "free",ncol = 2)
 
   g2
