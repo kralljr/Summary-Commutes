@@ -79,8 +79,10 @@ roadtype2 <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = rtype2)) +
 
 pmtile <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = lPM2)) +
   geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
-  scale_fill_gradient2(name = "Change in PM2.5 (SD)", low = "green", high = "red",
-                       mid = "white") +
+  # scale_fill_gradient2(name = "Change in PM2.5 (SD)", low = "green", high = "red",
+                       # mid = "white") +
+  scale_fill_gradient2(name = "Change in PM2.5 (SD)", low = "#dedc59", high = "#5c3a85", mid = "white") +
+
   #theme_bw() +
   theme(text = element_text(size=12), axis.text.y = element_blank(),
         axis.ticks.y = element_blank(), legend.position = c(.75, .25))

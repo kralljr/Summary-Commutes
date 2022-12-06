@@ -150,9 +150,12 @@ plot_cat_sens <- function(reslist, myterm) {
   g1 <- ggplot(lista, aes(y = term, x = estimate)) +
     geom_pointrange(aes(xmin = conf.low, xmax = conf.high, shape = name, linetype = name, colour = name),
                     position = position_dodge(0.2)) +
-    scale_colour_manual(values = cols, name = "Model") +
-    scale_shape_manual(name = "Model", values= sh) +
-    scale_linetype_manual(name = "Model", values = lt) +
+    scale_colour_manual(values = cols, name = "Model", breaks = c("Rush", "Ambient PM2.5",
+                                                                  "Meteorology", "Main")) +
+    scale_shape_manual(name = "Model", values= sh, breaks = c("Rush", "Ambient PM2.5",
+                                                              "Meteorology", "Main")) +
+    scale_linetype_manual(name = "Model", values = lt,breaks = c("Rush", "Ambient PM2.5",
+                                                                 "Meteorology", "Main")) +
     geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
     ylab("") +
     xlab(expression(atop(paste("Change in log PM"[2.5]," (log ",mu,"g/m"^3, ")"), "compared to local roads"))) +
@@ -331,9 +334,12 @@ plot_nocat_sens2 <- function(reslist, myterm, reslist2, myterm2) {
   g2 <- ggplot(lista2, aes(y = term, x = estimateIQR)) +
     geom_pointrange(aes(xmin = conf.lowIQR, xmax = conf.highIQR,
                     colour = name, shape = name, linetype = name), position = position_dodge(0.2)) +
-    scale_colour_manual(values = cols, name = "Model") +
-    scale_shape_manual(name = "Model", values = c(15 : 18)) +
-    scale_linetype_manual(name = "Model", values = c(1, 1, 1, 1)) +
+    scale_colour_manual(values = cols, name = "Model", breaks = c("Rush", "Ambient PM2.5",
+                                                                  "Meteorology", "Main")) +
+    scale_shape_manual(name = "Model", values = c(15 : 18), breaks = c("Rush", "Ambient PM2.5",
+                                                                       "Meteorology", "Main")) +
+    scale_linetype_manual(name = "Model", values = c(1, 1, 1, 1), breaks = c("Rush", "Ambient PM2.5",
+                                                                             "Meteorology", "Main")) +
     geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
     ylab("") +
     xlab(expression(atop(paste("Change in log PM"[2.5]," (log ",mu,"g/m"^3, ")" ), " per IQR increase"))) +

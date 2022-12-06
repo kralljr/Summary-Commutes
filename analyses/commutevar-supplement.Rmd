@@ -15,6 +15,7 @@ knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
 library(tidyverse)
 library(knitr)
 library(here)
+library(viridis)
 library(ggthemes)
 library(DescTools)
 library(RColorBrewer)
@@ -139,6 +140,42 @@ figs1
 
 
 
+## Figure `r k`. Variation in roadiness (in standard deviations (SD)) and speed (mph) over each observed trip (N=69).  
+
+```{r}
+k <- k + 1
+```
+
+
+```{r}
+rcomm1 <- tripplot[[2]]
+```
+
+```{r}
+srness <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = srness)) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
+  #scale_fill_colorblind(name = "Roadiness") +
+ # theme_bw() +
+    scale_fill_gradient2(name = "Roadiness", low = "#dedc59", high = "#5c3a85", mid = "white") +
+  theme(text = element_text(size=12), axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position  = c(.75, .25))
+
+speed <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = (mph))) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
+  scale_fill_viridis(begin = 1, end = 0, name = "Speed (mph)") +#(name = "Speed (mph)", high = "#132B43", low = "#56B1F7") +
+  #theme_bw() +
+  theme(text = element_text(size=12), axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(), legend.position = c(.75, .25))
+
+tripplot <- srness + speed
+tripplot[[2]] = tripplot[[2]] + theme(axis.text.y = element_blank(),
+                                        axis.ticks.y = element_blank(),
+                                        axis.title.y = element_blank() )
+
+tripplot
+
+```
 
 
 ## Figure S`r k`. Distributions of daily ambient PM$_{2.5}$ ($\mu$g/m$^3$) and hourly PM$_{2.5}$ ($\mu$g/m$^3$) for N=45 person-days of observation.

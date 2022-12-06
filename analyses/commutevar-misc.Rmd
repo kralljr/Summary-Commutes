@@ -141,3 +141,29 @@ dplyr::select(dat, id, modelcar, makecar) %>%
 
 
 ```
+
+
+# Rush hour
+
+```{r}
+dplyr::select(rcommLM, ID, id3, rushmorn, rusheven) %>%
+  mutate(none = ifelse(rushmorn == 0 & rusheven == 0, 1, 0),
+         both =ifelse(rushmorn == 1 & rusheven == 1, 1, 0)) %>%
+  #group_by(ID) %>%
+  summarize(morn = mean(rushmorn), even = mean(rusheven),
+            none = mean(none), both = mean(both))
+
+```
+
+
+# Roadiness and speed
+
+```{r}
+dplyr::select(rcommLM, ID, id3, mph, srness) %>%
+  #group_by(ID) %>%
+  summarize(speed = mean(mph), speedsd = sd(mph),
+            msrness = mean(srness), srnesssd = sd(srness))
+
+```
+
+

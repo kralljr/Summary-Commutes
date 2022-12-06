@@ -423,7 +423,7 @@ ggplot(long, aes(x = value, y = .resid)) +
 ```
 
 
-```{r, eval = eval1}
+```{r, eval = F}
 resl <- list(Main = res1rt, All = resA)
 plot_cat_sens(resl, "rtype")
 
