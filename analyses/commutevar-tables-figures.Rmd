@@ -35,8 +35,6 @@ load(file.path(figloc, "figpaired.RData"))
 # masstime
 load(here("results/masstime.RData"))
 
-# icc
-load(here("results/icc.RData"))
 
 # lm res
 
@@ -48,22 +46,6 @@ load(here("results/lmfig.RData"))
 
 
 
-# Tables
-```{r}
-k <- 1
-
-```
-
-
-## Table `r k`. Intraclass correlations (ICC) comparing between-participant to within-participant variability by levels of road features.
-
-```{r}
-k <- k + 1
-```
-
-```{r}
-kable(icc, digits = 2)
-```
 
 
 # Figures
@@ -75,7 +57,7 @@ k <- 1
 
 
 
-## Figure `r k`. For each observed trip (N=69), variation in road type and PM$_{2.5}$ over each trip.  PM$_{2.5}$ is shown as the difference in log $\mu$g/m$^3$ from the trip-specific mean to better visualize changes across each trip.
+## Figure `r k`. Variation in road type (highway, ramp/tunnel, local connecting, and local roads) and PM$_{2.5}$ (in standard deviations (SD) from trip-specific means) over each observed trip (N=69).  
 
 ```{r}
 k <- k + 1
@@ -87,8 +69,8 @@ rcomm1 <- tripplot[[2]]
 ```
 
 ```{r}
-roadtype2 <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = rtype)) +
-  geom_tile() + ylab("Trip") + xlab("Minutes since obs trip start") +
+roadtype2 <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = rtype2)) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
   scale_fill_colorblind(name = "Road type") +
  # theme_bw() +
   theme(text = element_text(size=12), axis.text.y = element_blank(),
@@ -96,8 +78,8 @@ roadtype2 <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = rtype)) +
         legend.position  = c(.75, .25))
 
 pmtile <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = lPM2)) +
-  geom_tile() + ylab("Trip") + xlab("Minutes since obs trip start") +
-  scale_fill_gradient2(name = "log PM2.5 difference", low = "green", high = "red",
+  geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
+  scale_fill_gradient2(name = "Change in PM2.5 (SD)", low = "green", high = "red",
                        mid = "white") +
   #theme_bw() +
   theme(text = element_text(size=12), axis.text.y = element_blank(),
@@ -113,7 +95,7 @@ tripplot
 ```
 
 
-## Figure `r k`. Boxplot of differences in PM$_{2.5}$ between commute pairs (N=12)
+## Figure `r k`. Distributions of absolute PM$_{2.5}$ differences ($\mu$g/m$^3$) across observations for each commute pair (N=12)
 
 ```{r}
 k <- k + 1
@@ -125,7 +107,7 @@ figpaired
 
 
 
-## Figure `r k`. Mean (95% confidence intervals) mass-time ratio of PM$_{2.5}$ by levels of road features.  
+## Figure `r k`. Mean (95% confidence intervals) mass-time ratio of PM$_{2.5}$ by road features, including road types and quartiles of roadiness and speed.  
 
 ```{r}
 k <- k + 1
@@ -139,7 +121,7 @@ masstime2
 
 
 
-## Figure `r k`. Associations of road type with in-vehicle PM$_{2.5}$ concentrations from linear mixed models.  Results are reported as the change in log $\mu$g/m$^3$ comparing travelling on highways, local connecting roads, and ramps/tunnels to local roads.  Results include main models as well as models adjusted for meteorology, ambient PM$_{2.5}$, and rush hour commutes.
+## Figure `r k`. Associations of road type with in-vehicle PM$_{2.5}$ concentrations from linear mixed models, reported as the change in log $\mu$g/m$^3$ (95% confidence intervals) comparing travelling on highways, local connecting roads, and ramps/tunnels to local roads.  Results include main models as well as models adjusted for meteorology, ambient PM$_{2.5}$, and rush hour commutes.
 
 ```{r}
 k <- k + 1
@@ -153,7 +135,7 @@ fig5
 
 
 
-## Figure `r k`. Associations of speed and roadiness with in-vehicle PM$_{2.5}$ concentrations from linear mixed models.  Results are reported as the change in log $\mu$g/m$^3$ for an interquartile (IQR) increase in speed or roadiness.   Results include main models as well as models adjusted for meteorology, ambient PM$_{2.5}$, and rush hour commutes.
+## Figure `r k`. Associations of speed and roadiness with in-vehicle PM$_{2.5}$ concentrations from linear mixed models, reported as the change in log $\mu$g/m$^3$ (95% confidence interval) for an interquartile (IQR) increase in speed or roadiness.   Results include main models as well as models adjusted for meteorology, ambient PM$_{2.5}$, and rush hour commutes.
  
 
 ```{r}

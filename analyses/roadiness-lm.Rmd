@@ -185,7 +185,7 @@ eqn4 <- "lPM ~ srness + rushmorn + rusheven"
 res4 <- get_lme(rcomm1, iqrs, eqn4, re = "~ 1| ID / id3")
 # ACF(res4$lme1, resType = "normalized", maxLag = 30) %>% plot()
 
-resl <- list(Main = res1,  Meteorology = res2, `PM2.5` = res3, Rush = res4)
+resl <- list(Main = res1,  Meteorology = res2, `Ambient PM2.5` = res3, Rush = res4)
 reslrn <- resl
 ```
 
@@ -227,7 +227,7 @@ eqn4 <- "lPM ~ rtype + rushmorn + rusheven"
 res4 <- get_lme(rcomm1, iqrs, eqn4, re = "~ 1| ID / id3")
 # ACF(res4$lme1, resType = "normalized", maxLag = 30) %>% plot()
 
-resl <- list(Main = res1,  Meteorology = res2, `PM2.5` = res3,  Rush = res4)
+resl <- list(Main = res1,  Meteorology = res2, `Ambient PM2.5` = res3,  Rush = res4)
 reslrt <- resl
 ```
 
@@ -276,7 +276,7 @@ eqn4 <- "lPM ~ mph + rushmorn + rusheven"
 res4 <- get_lme(rcomm1, iqrs, eqn4, re = "~ 1| ID / id3")
 # ACF(res4$lme1, resType = "normalized", maxLag = 30) %>% plot()
 
-resl <- list(Main = res1, Meteorology = res2, `PM2.5` = res3, Rush = res4)
+resl <- list(Main = res1, Meteorology = res2, `Ambient PM2.5` = res3, Rush = res4)
 ```
 
 
@@ -323,12 +323,14 @@ rcommlag <- mutate(rcomm1, var = srness)
 eqn1 <- "lPM ~ var" 
 resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
                intervals = T)
-
+SreslRN <- resl
 rcomm0 <- rename(rcomm1, var = srness)
 eqn1 <- "lPM ~ var"
 res1 <- get_lme(rcomm0, iqrs, eqn1, re = "~ 1| ID / id3")
 resl[[12]] <- res1
 names(resl)[12] <- "main"
+
+
 ```
 
 ```{r}
@@ -346,19 +348,21 @@ rcommlag <- mutate(rcomm1, var = rtype)
 eqn1 <- "lPM ~ var" 
 resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
                intervals = T )
+SreslRT <- resl
 
 rcomm0 <- rename(rcomm1, var = rtype)
 eqn1 <- "lPM ~ var"
 res1 <- get_lme(rcomm0, iqrs, eqn1, re = "~ 1| ID / id3")
 resl[[12]] <- res1
 names(resl)[12] <- "main"
+
 ```
 
 
 ```{r}
 
-plot_cat_sens(resl, "var")
-
+figs7 <- plot_cat_senslag(SreslRT, "var")
+figs7
 
 ```
 
@@ -370,19 +374,21 @@ rcommlag <- mutate(rcomm1, var = mph)
 eqn1 <- "lPM ~ var" 
 resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
                intervals = T)
+SreslS <- resl
 
 rcomm0 <- rename(rcomm1, var = mph)
 eqn1 <- "lPM ~ var"
 res1 <- get_lme(rcomm0, iqrs, eqn1, re = "~ 1| ID / id3")
 resl[[12]] <- res1
 names(resl)[12] <- "main"
+
 ```
 
 ```{r}
 plot_nocat_sens(resl, "var")
 
-
-
+figs8 <- plot_nocat_senslag(SreslRN, "srness", SreslS, "mph")
+figs8
 ```
 
 
@@ -476,5 +482,5 @@ plot_nocat(res)
 
 
 ```{r}
-save(fig5, fig6, file = here("results/lmfig.RData"))
+save(fig5, fig6, figs7, figs8, file = here("results/lmfig.RData"))
 ```

@@ -39,6 +39,13 @@ load(here("results/gpsplotdata.RData"))
 # masstime
 load(here("results/masstime.RData"))
 
+# lag figs
+load(here("results/lmfig.RData"))
+
+
+# icc
+load(here("results/icc.RData"))
+
 ```
 
 # Tables
@@ -61,7 +68,7 @@ kable(demo)
 
 
 
-## Table S`r k`. N (%) of categorical weather characteristics for N=45 person-days of observation.
+## Table S`r k`. Meteorological characteristics (N (%)) for N=45 person-days of observation.
 
 ```{r}
 k <- k + 1
@@ -73,7 +80,7 @@ kable(catweath)
 
 
 
-## Table S`r k`. Mean (SD) of wind speed (m/s) and temperature for N=45 person-days of observation.
+## Table S`r k`. Mean (SD) of wind speed (m/s) and temperature (degrees Celsius) for N=45 person-days of observation.
 
 ```{r}
 k <- k + 1
@@ -83,6 +90,19 @@ k <- k + 1
 kable(contweat1)
 ```
 
+
+
+## Table S`r k`. Intraclass correlations (ICC) comparing between-participant to within-participant variability by road features, including road types and quartiles of roadiness and speed.
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+kable(icc, digits = 2)
+```
+
+
 # Figures
 
 ```{r}
@@ -91,7 +111,7 @@ k <- 1
 
 
 
-## Figure `r k`. Distributions of personal in-vehicle PM$_{2.5}$ exposures ($\mu$g/m$^3$) for each participant (N=25) on the natural log scale.
+## Figure S`r k`. Distributions of in-vehicle PM$_{2.5}$ exposures ($\mu$g/m$^3$) for each participant (N=25) on the natural log scale, along with observation time in minutes.
 
 ```{r}
 k <- k + 1
@@ -105,14 +125,14 @@ dates <- dplyr::select(rcomm1, date) %>% unique() %>%
   rename(date_local = date)
 rcomm2 <- rcomm1 %>%
   mutate(PM = PM + 0.01)
-boxplot1 <- ggplot(rcomm2, aes(y = fct_reorder(ID, medl), x  = PM)) + geom_boxplot() +#outlier.shape = NA
+figs1 <- ggplot(rcomm2, aes(y = fct_reorder(ID, medl), x  = PM)) + geom_boxplot() +#outlier.shape = NA
    ylab(expression(paste("Minutes observed per participant"))) +
   xlab((expression(paste("PM"[2.5], " (", mu, "g/m"^3, ")")))) +
   scale_x_continuous(trans = "log", breaks = c(0.5, 3, 20)) +
   theme_bw() +
   scale_y_discrete(breaks = ns$ID, labels = ns$n) +
   theme(text = element_text(size = 12))
-boxplot1 
+figs1 
 
 ```
 
@@ -121,20 +141,23 @@ boxplot1
 
 
 
-## Figure S`r k`. Distributions of daily ambient PM$_{2.5}$ ($\mu$g/m$^3$) and hourly PM$_{2.5}$ ($\mu$g/m$^3$) for days of observation (N=38)
+## Figure S`r k`. Distributions of daily ambient PM$_{2.5}$ ($\mu$g/m$^3$) and hourly PM$_{2.5}$ ($\mu$g/m$^3$) for N=45 person-days of observation.
 
 ```{r}
 k <- k + 1
 ```
 
 ```{r}
-# get data
-va24 <- dailypm[[2]]
-
 rcomm1 <- boxplot1[[2]]
 ns <- boxplot1[[3]]
 
-dates <- dplyr::select(rcomm1, date) %>% unique() %>% rename(date_local = date)
+dates <- dplyr::select(rcomm1, date, ID) %>% unique() %>% rename(date_local = date)
+
+# get data
+va24 <- dailypm[[2]]
+va24 <- full_join(va24, dates)
+
+
 obsdiff0 <- fighourly[[2]]
 obsdiff <- left_join(dates, obsdiff0)
 alps <- fighourly[[3]] - 0.2
@@ -177,7 +200,7 @@ fighourly
 
 
 
-## Figure S`r k`. Wind rose plot showing direction of the fastest wind sustained over five minutes across N=45 person-days of observation.
+## Figure S`r k`. Wind rose plot showing direction of the fastest wind (degrees) sustained over five minutes across N=45 person-days of observation.
 
 ```{r}
 k <- k + 1
@@ -190,7 +213,7 @@ plot.windrose(winddir1)
 
 
 
-## Figure `r k`. Percentage of observations on each road type per participant (N=25)
+## Figure S`r k`. Percentage of observations on each road type per participant (N=25).
 
 ```{r}
 k <- k + 1
@@ -198,27 +221,31 @@ k <- k + 1
 
 ```{r}
 perc <- roadtype1[[2]]
-roadtype1 <- ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) + 
+perc <- mutate(perc, rtype = factor(rtype, levels = c("High/SecHigh", "Other", "LocalConn", "Local"),
+                                    labels = c("Highway", "Ramp/Tunnel",
+                                               "LocalConn", "Local"))) 
+
+roadtypep <- ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) + 
   geom_tile() +
   scale_fill_gradient(low = "white", high = "red", name = "Percent") +
   xlab("") + ylab("Participant") +
   theme(text = element_text(size=12), axis.text.y = element_blank())
 
-roadtype1
+roadtypep
 
 ```
 
 
 
+```{r, eval = F}
 
-## Figure `r k`. GPS locations of all commutes (N=32).
+## Figure S`r k`. GPS locations of all commutes (N=32).
 
-- Why only 32??
-```{r}
 k <- k + 1
 ```
 
-```{r}
+```{r, eval = F}
+t2 <- dplyr::select(rcomm1, ID, cum1, obs, date) %>% unique() 
 createcap <- function(x) {
   strsplit(x, " ") %>% 
   lapply(., function(x) paste0(toupper(substr(x, 1, 1)), tolower(substring(x, 2)))) %>% 
@@ -253,7 +280,7 @@ g2 <- ggplot() +
   xlim(c(-78, -76.5)) + 
   geom_polygon( data=MainStates1, aes(x=long, y=lat, group = group),
                 color="grey70",fill = "white") +
-  geom_point(data = t1, aes(x = Longitude, y = Latitude), alpha = 0.05,
+  geom_point(data = t2, aes(x = Longitude, y = Latitude), alpha = 0.05, # prev t1
              colour = "grey40") +
   # scale_color_manual(values = cols) +
   geom_text(data = labs, aes(x = long, y = lat, label = subregion1),
@@ -264,7 +291,7 @@ g2
 ```
 
 
-## Figure S`r k`. Distributions of mass-time ratio of PM$_{2.5}$ by levels of road features.  
+## Figure S`r k`. Distributions of mass-time ratio of PM$_{2.5}$ by road features, including road types and quartiles of roadiness and speed.  
 
 ```{r}
 k <- k + 1
@@ -272,5 +299,33 @@ k <- k + 1
 
 ```{r}
 masstime
+
+```
+
+
+
+## Figure S`r k`. Associations of road type with in-vehicle PM$_{2.5}$ concentrations from linear mixed models for main models (lag 0) and lags up to 5 minutes, reported as the change in log $\mu$g/m$^3$ comparing travelling on highways, ramps/tunnels, and local connecting roads to local roads.  
+
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+figs7
+
+```
+
+
+
+## Figure S`r k`. Associations of speed and roadiness with in-vehicle PM$_{2.5}$ concentrations from linear mixed models for main models (lag 0) and lags up to 5 minutes, reported as the change in log $\mu$g/m$^3$ for an interquartile (IQR) increase in speed or roadiness.   
+
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+figs8
 
 ```

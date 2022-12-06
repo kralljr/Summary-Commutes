@@ -260,9 +260,12 @@ roadtype1 <- list(roadtype1, perc)
 rcomm1 <- mutate(rcomm, id2 = fct_reorder(id2, timemin)) %>%
   arrange(id2) %>%
   group_by(id2) %>%
-  mutate(mean1 = mean(lPM, na.rm = T), lPM2 = lPM - mean1) %>%
+  mutate(mean1 = mean(lPM, na.rm = T), sd1 = sd(lPM, na.rm = T),
+         lPM2 = (lPM - mean1) / sd1,
+         rtype2 = factor(rtype, levels = c("High/SecHigh", "Other", "LocalConn", "Local"),
+                         labels = c("Highway", "Ramp/Tunnel", "LocalConn", "Local"))) %>%
   ungroup()
-roadtype2 <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = rtype)) +
+roadtype2 <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = rtype2)) +
   geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
   scale_fill_colorblind(name = "Road type") +
   theme_bw() +
@@ -272,7 +275,8 @@ roadtype2 <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = rtype)) +
 
 pmtile <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = lPM2)) +
   geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
-  scale_fill_gradient(name = "log PM2.5 difference", low = "#FFFF33", high = "#FF3333") +
+  scale_fill_gradient2(name = "Change in PM2.5 (SD)", low = "#18c732", high = "#FF3333",
+                       mid = "white") +
   theme_bw() +
   theme(text = element_text(size=12), axis.text.y = element_blank(),
         axis.ticks.y = element_blank(), legend.position = c(.75, .25))

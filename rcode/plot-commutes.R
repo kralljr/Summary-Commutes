@@ -8,18 +8,19 @@ library(RColorBrewer)
 # load data
 load(here("data/rcomm2.RData"))
 
+
+# get unique commutes by time
+dplyr::select(rcomm2, ID, cum1, date) %>% unique() %>% dim()
+
+idtime <- dplyr::select(rcomm2, ID, rdatetime, date, cum1)
+
 # load GPS
 load(here("data/tripdata.RData"))
 
-tripdata1 <- tripdata %>%
-  # remove PA
-
+tripdata1 <- left_join(idtime, tripdata)
+# remove PA
  # filter(., ID != "GMU1026") %>%
-  mutate(hr = as.numeric(substr(trip_total_time, 1, 2)),
-         min = as.numeric(substr(trip_total_time, 4, 5)),
-         timetotal = hr * 60 + min) %>%
-  # need to merge wqith PM
-  dplyr::filter(timetotal >=15)
+
 loc <- tripdata1[, c("ID", "Longitude", "Latitude")] %>% as.data.frame()
 
 # plot(loc[, "Longitude"], loc[, "Latitude"])
