@@ -122,7 +122,7 @@ points(stations1$longitude, stations1$latitude, col = "red")
 ```
 # Monitor type?
 
-```{r}
+```{r, eval = F}
 load(here("data/va_monitor_data.RData"))
 with(va_monitor_data, table(method, AQS_site_ID))
 with(va_monitor_data, table(method, sample_duration))
@@ -162,7 +162,8 @@ dplyr::select(rcommLM, ID, id3, rushmorn, rusheven) %>%
 dplyr::select(rcommLM, ID, id3, mph, srness) %>%
   #group_by(ID) %>%
   summarize(speed = mean(mph), speedsd = sd(mph),
-            msrness = mean(srness), srnesssd = sd(srness))
+            msrness = mean(srness), srnesssd = sd(srness),
+            minspeed = min(mph), maxspeed = max(mph))
 
 ```
 

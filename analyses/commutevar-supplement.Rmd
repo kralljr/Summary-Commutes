@@ -81,15 +81,6 @@ kable(catweath)
 
 
 
-## Table S`r k`. Mean (SD) of wind speed (m/s) and temperature (degrees Celsius) for N=45 person-days of observation.
-
-```{r}
-k <- k + 1
-```
-
-```{r}
-kable(contweat1)
-```
 
 
 
@@ -139,8 +130,31 @@ figs1
 
 
 
+## Figure S`r k`. Percentage of observations on each road type per participant (N=25).
 
-## Figure `r k`. Variation in roadiness (in standard deviations (SD)) and speed (mph) over each observed trip (N=69).  
+```{r}
+k <- k + 1
+```
+
+```{r}
+perc <- roadtype1[[2]]
+perc <- mutate(perc, rtype = factor(rtype, levels = c("High/SecHigh", "Other", "LocalConn", "Local"),
+                                    labels = c("Highway", "Ramp/Tunnel",
+                                               "LocalConn", "Local"))) 
+
+roadtypep <- ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) + 
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "red", name = "Percent") +
+  xlab("") + ylab("Participant") +
+  theme(text = element_text(size=12), axis.text.y = element_blank())
+
+roadtypep
+
+```
+
+
+
+## Figure S`r k`. Variation in roadiness (in standard deviations (SD)) and speed (mph) over each observed trip (N=69).  
 
 ```{r}
 k <- k + 1
@@ -248,29 +262,6 @@ plot.windrose(winddir1)
 
 ```
 
-
-
-## Figure S`r k`. Percentage of observations on each road type per participant (N=25).
-
-```{r}
-k <- k + 1
-```
-
-```{r}
-perc <- roadtype1[[2]]
-perc <- mutate(perc, rtype = factor(rtype, levels = c("High/SecHigh", "Other", "LocalConn", "Local"),
-                                    labels = c("Highway", "Ramp/Tunnel",
-                                               "LocalConn", "Local"))) 
-
-roadtypep <- ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) + 
-  geom_tile() +
-  scale_fill_gradient(low = "white", high = "red", name = "Percent") +
-  xlab("") + ylab("Participant") +
-  theme(text = element_text(size=12), axis.text.y = element_blank())
-
-roadtypep
-
-```
 
 
 
