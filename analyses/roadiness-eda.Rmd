@@ -384,7 +384,7 @@ L1 variables: I created as 1 day lag
 
 ```{r}
 
-weather1 <- dplyr::select(rcomm, date_local, ID, awnd : snowL1m, snowbin: prcpbinL1m) %>%
+weather1 <- dplyr::select(rcomm, date_local, ID, awnd : RH, snowbin: prcpbinL1m) %>%
   unique() %>%
   dplyr::select( -contains("wdf")) 
 
@@ -425,6 +425,7 @@ snowptab%>%
 
 ### By observation 
 
+NOTE: Don't use-- this is by observation and not for person-days
 ```{r}
 weather1b <- dplyr::select(rcomm, date_local, ID, group, awnd : snowL1m,snowbin: prcpbinL1m) %>%
   unique() %>%
@@ -541,8 +542,8 @@ Possible multiple obs of same commute:
 # Daily PM
 
 ```{r}
-dates <- dplyr::select(rcomm, date_local) %>% unique()
-if(nrow(dates) != 38) {
+dates <- dplyr::select(rcomm, date_local, ID) %>% unique()
+if(nrow(dates) != 45) {
   stop("Incorrect dates: fix rcomm dates here")
 }
 

@@ -1,9 +1,10 @@
 ---
-title: 'Variability in PM2.5 exposures during daily commutes'
+title: 'Short-term associations between road features and in-vehicle PM2.5 during daily trips'
 subtitle: "Supplementary Material"
 output: 
-  html_document:
+  pdf_document:
     toc: true
+    keep_tex: true
 ---
 
 ```{r setup, include=FALSE}
@@ -55,7 +56,7 @@ load(here("results/icc.RData"))
 k <- 1
 ```
 
-## Table S`r k`. Demographic characteristics (N (%)) for N=25 commuters.
+## Table S`r k`. Demographic characteristics (N (%)) for N=25 participants.
 
 ```{r}
 k <- k + 1

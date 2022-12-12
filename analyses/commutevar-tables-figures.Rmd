@@ -1,9 +1,13 @@
 ---
-title: 'Variability in PM2.5 exposures during daily commutes'
-subtitle: "Tables and figures"
-output: 
+title: "Short-term associations between road features and in-vehicle PM2.5 during
+  daily trips"
+subtitle: Main text figures
+output:
+  pdf_document:
+    toc: yes
+    keep_tex: true
   html_document:
-    toc: true
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -123,7 +127,7 @@ masstime2
 
 
 
-## Figure `r k`. Associations of road type with in-vehicle PM$_{2.5}$ concentrations from linear mixed models, reported as the change in log $\mu$g/m$^3$ (95% confidence intervals) comparing travelling on highways, local connecting roads, and ramps/tunnels to local roads.  Results include main models as well as models adjusted for meteorology, ambient PM$_{2.5}$, and rush hour commutes.
+## Figure `r k`. Associations of road type with in-vehicle PM$_{2.5}$ concentrations from linear mixed models, reported as the change in log $\mu$g/m$^3$ (95% confidence intervals) comparing travelling on highways, local connecting roads, and ramps/tunnels to local roads.  Results include main models as well as models adjusted for meteorology, ambient PM$_{2.5}$, and rush hour trips, and all road features.
 
 ```{r}
 k <- k + 1
@@ -137,7 +141,7 @@ fig5
 
 
 
-## Figure `r k`. Associations of speed and roadiness with in-vehicle PM$_{2.5}$ concentrations from linear mixed models, reported as the change in log $\mu$g/m$^3$ (95% confidence interval) for an interquartile (IQR) increase in speed or roadiness.   Results include main models as well as models adjusted for meteorology, ambient PM$_{2.5}$, and rush hour commutes.
+## Figure `r k`. Associations of speed and roadiness with in-vehicle PM$_{2.5}$ concentrations from linear mixed models, reported as the change in log $\mu$g/m$^3$ (95% confidence interval) for an interquartile (IQR) increase in speed or roadiness.   Results include main models as well as models adjusted for meteorology, ambient PM$_{2.5}$, rush hour trips, and all road features.
  
 
 ```{r}

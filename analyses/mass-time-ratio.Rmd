@@ -102,7 +102,7 @@ d1 <- dplyr::select(rcommU2, name, ID, value, mtratio) %>%
   mutate(mean = mean(mtratio)) %>%
   ungroup() %>%
   nest(data = c(ID, mtratio)) %>%
-  mutate(bs1 = map(data, ~bssfun(dat = .))) %>%
+  mutate(bs1 = purrr::map(data, ~bssfun(dat = .))) %>%
   dplyr::select(-data) %>%
   unnest(bs1) %>%
   group_by(name, value, mean) %>%
@@ -111,7 +111,9 @@ d1 <- dplyr::select(rcommU2, name, ID, value, mtratio) %>%
          med = quantile(bs1, probs = c(0.5)))
 ```
 
-
+```{r}
+kable(d1)
+```
 ```{r}
 masstime2 <- ggplot(d1, aes(x = med, y = value)) +
   geom_pointrange(aes(xmin = lb, xmax = ub)) +

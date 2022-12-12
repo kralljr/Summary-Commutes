@@ -135,7 +135,97 @@ kable(icc, digits = 2)
 
 
 
+## Continuous roadiness/speed
 
+
+
+```{r, eval = F}
+# model each microenv separately.  start with road type
+
+# old
+# eqn1 <- "lPM ~ rtype"
+#   lme1 <- lme(formula(eqn1),
+#               random= formula("~1 | ID / id3"),
+#               data=rcomm1)
+
+geticc <- function(dat) {
+  lmer1 <- lmer(ilPM ~ value + (1| ID), data = dat)
+  icc1 <- icc(lmer1)
+  #browser()
+  if(is.na(icc1[1])) {
+    lme1 <- lme(ilPM ~ value, random = ~1 | ID, data = dat)
+    int1 <- intervals(lme1)
+    with <- int1$reStruct$ID$est^2 
+    #print("hi")
+    res <- with/ (with + lme1$sigma^2)
+  } else {
+    res <- icc1$ICC_unadjusted
+  }
+  #c(icc1$ICC_unadjusted) # icc1$ICC_adjusted
+  res
+}
+
+# note: summary same as mass-time-ratio
+rcommU <- dplyr::select(rcomm1, PM, ID, id3, srness, mph) 
+
+icc <- rcommU %>%
+  pivot_longer(srness : mph) %>%
+  group_by(name, value, ID, id3) %>%
+  summarize(ilPM = log(sum(PM + 0.01))) %>%
+  ungroup() %>%
+  nest(data = c(ilPM, ID, id3, value)) %>%
+  mutate(icc = purrr::map(data, ~geticc(dat = .))) %>%
+  unnest(icc) %>%
+  dplyr::select(-data)
+
+
+```
+
+
+```{r, eval =F}
+geticc <- function(dat) {
+  lmer1 <- lmer(value ~ (1| ID), data = dat)
+  icc1 <- icc(lmer1)
+  #browser()
+  if(is.na(icc1[1])) {
+    lme1 <- lme(value ~ 1, random = ~1 | ID, data = dat)
+    int1 <- intervals(lme1)
+    with <- int1$reStruct$ID$est^2 
+    #print("hi")
+    res <- with/ (with + lme1$sigma^2)
+  } else {
+    res <- icc1$ICC_unadjusted
+  }
+  #c(icc1$ICC_unadjusted) # icc1$ICC_adjusted
+  res
+}
+
+# note: summary same as mass-time-ratio
+rcommU <- dplyr::select(rcomm1, ID, id3, srness, mph) 
+
+icc <- rcommU %>%
+  pivot_longer(srness : mph) %>%
+  group_by(name, ID, id3) %>%
+  summarize(value = (mean(value))) %>%
+  ungroup() %>%
+  nest(data = c(ID, id3, value)) %>%
+  mutate(icc = purrr::map(data, ~geticc(dat = .))) %>%
+  unnest(icc) %>%
+  dplyr::select(-data)
+
+
+# %>%
+#   mutate(name =    case_when(name == "qmph" ~ "Speed (mph)",
+#                           name == "qsrness" ~ "Roadiness",
+#                           name == "rtype" ~ "Road type"),
+#          name = factor(name, levels = c("Road type", "Roadiness", "Speed (mph)")),
+#          value = factor(value, levels = c("High/SecHigh", "Other", "LocalConn", "Local", paste0("Q", 1 : 4)),
+#                         labels = c("Highway", "Ramp/Tunnel", "LocalConn", "Local",
+#                                    paste0("Q", 1 : 4)))) %>%
+#   rename(`Road feature` = name, Value = value, ICC = icc) %>%
+#   ungroup() %>%
+#   arrange(`Road feature`, Value)
+```
 
 # Variance components: FYI
 

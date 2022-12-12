@@ -300,13 +300,30 @@ sc %>%  pivot_longer(awnd : mph) %>%
   mutate(cor1 = map(data, lm1)) %>%
   unnest(cor1) %>%
   dplyr::select(-data) %>%
-  dplyr::filter(!(name %in% c("prcpbin", "snowbin", "cat5sm", "obsdiff"))) %>%
+  dplyr::filter(!(name %in% c("prcpbin", "snowbin", "cat5sm"))) %>%
   kable(digits = 2)
 
 
 ggplot(sc, aes(x = mph, y =md)) + geom_point()
 ```
 
+## adjust for daily PM
+
+
+```{r}
+sc <- group_by(coms3, IDcommute) %>% mutate(adiffPM = diffPM - daily, md = median(adiffPM))  %>%
+  dplyr::select(-c(propcs, diffPM, adiffPM)) %>%
+  unique() 
+
+
+sc %>%  pivot_longer(awnd : mph) %>%
+  nest(data = c(ID : md, value)) %>%
+  mutate(cor1 = map(data, lm1)) %>%
+  unnest(cor1) %>%
+  dplyr::select(-data) %>%
+  dplyr::filter(!(name %in% c("prcpbin", "snowbin", "cat5sm"))) %>%
+  kable(digits = 2)
+```
 
 # Summarize
 
@@ -322,6 +339,9 @@ coms3b2 <- coms3b %>% dplyr::select(IDcommute, diffPM, daily) %>%
   arrange(med)
 
 coms3b2
+ids <- substr(coms3b2$IDcommute, 1, 7)
+unique(ids) %>% length()
+data.frame(ids, duplicated(ids))
 summarize(coms3b2, median(med), min(med), max(med))
 
 coms3c0 <- coms3 %>% dplyr::select(IDcommute, diffPM, daily) %>%
@@ -340,9 +360,8 @@ coms3c %>%
   mutate(med = round(med, 2), q1 = round(q1, 2),q3 = round(q3, 2),
     MedianIQR = paste0(med, " (", q1, ", ", q3, ")")) %>%
   arrange(med) %>%
-  dplyr::select(-c(med, IQR, IDcommute, q1, q3)) %>%
-  rowid_to_column() %>%
-  rename(ID = rowid) 
+  dplyr::select(-c(med, IQR, q1, q3)) %>%
+  rowid_to_column() 
 
 ```
 
