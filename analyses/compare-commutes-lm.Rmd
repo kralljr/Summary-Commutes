@@ -47,7 +47,10 @@ load(here("data/va24.RData"))
 source(here("functions/model-funs.R"))
 
 figloc <- "~/Dropbox/CommuteVar/figures/"
+
+
 ```
+
 
 
 
@@ -303,9 +306,47 @@ sc %>%  pivot_longer(awnd : mph) %>%
   dplyr::filter(!(name %in% c("prcpbin", "snowbin", "cat5sm"))) %>%
   kable(digits = 2)
 
-
 ggplot(sc, aes(x = mph, y =md)) + geom_point()
 ```
+
+
+
+## Check for in-vehicle RH
+
+
+```{r}
+# in-vehicel RH
+load("data/inrh.RData")
+cinrh <- left_join(coms2, inrh) %>%
+  dplyr::select(-c(rdatetime, PM)) %>%
+  group_by(ID, commute, min2, propcs) %>%
+  summarize(rtiRH = mean(rtiRH, na.rm = T)) %>%
+  ungroup() %>%
+  pivot_wider(names_from = min2, values_from = rtiRH) %>%
+  arrange(ID, commute, propcs) %>%
+  group_by(ID, commute) %>%
+  mutate(lagsecond = dplyr::lag(second), leadsecond= dplyr::lead(second),
+         second = ifelse(is.na(second), (lagsecond + leadsecond) / 2, second)) %>%
+  dplyr::select(-c(lagsecond, leadsecond)) %>%
+  na.omit() %>%
+  mutate(diffinrh = second - first) %>%
+  dplyr::select( -c(first, second)) %>%
+  full_join(comspaired) %>%
+  mutate(IDcommute = paste0(ID, commute))
+cinrh <- cinrh %>%
+  dplyr::filter( !(ID == "GMU1001" & commute== "evening" & propcs < 6.26 & propcs >6.24))
+
+cinrh1 <- group_by(cinrh, IDcommute) %>% 
+  mutate(md = median(diffPM), value = median(diffinrh)) %>%
+  dplyr::select(-c(propcs, diffPM, diffinrh, first, second)) %>%
+  unique() 
+
+lm1(cinrh1)
+
+
+```
+
+
 
 ## adjust for daily PM
 
