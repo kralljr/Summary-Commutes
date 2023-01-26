@@ -104,7 +104,7 @@ k <- 1
 
 
 
-## Figure S`r k`. Distributions of in-vehicle PM$_{2.5}$ exposures ($\mu$g/m$^3$) for each participant (N=25) on the natural log scale, along with observation time in minutes.
+## Figure S`r k`. Distributions of in-vehicle PM$_{2.5}$ exposures ($\mu$g/m$^3$) for each participant (N=25) on the natural log scale, along with observation time in minutes.  Participants are ordered by their median personal PM$_{2.5}$ exposures across trips.
 
 ```{r}
 k <- k + 1
@@ -121,7 +121,7 @@ rcomm2 <- rcomm1 %>%
 figs1 <- ggplot(rcomm2, aes(y = fct_reorder(ID, medl), x  = PM)) + geom_boxplot() +#outlier.shape = NA
    ylab(expression(paste("Minutes observed per participant"))) +
   xlab((expression(paste("PM"[2.5], " (", mu, "g/m"^3, ")")))) +
-  scale_x_continuous(trans = "log", breaks = c(0.5, 3, 20)) +
+  scale_x_continuous(trans = "log", breaks = c(0.08, 0.5, 3, 20)) +
   theme_bw() +
   scale_y_discrete(breaks = ns$ID, labels = ns$n) +
   theme(text = element_text(size = 12))
