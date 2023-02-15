@@ -98,6 +98,7 @@ tripplot[[2]] = tripplot[[2]] + theme(axis.text.y = element_blank(),
 
 tripplot
 
+ggsave(file = here("figures/fig1.png"))
 ```
 
 
@@ -122,6 +123,9 @@ k <- k + 1
 
 ```{r}
 masstime2
+
+ggsave(file = here("figures/fig2.png"), width = 3.5)
+
 ```
 
 
@@ -136,6 +140,9 @@ k <- k + 1
 
 ```{r}
 fig5
+
+ggsave(file = here("figures/fig3.png"), width = 4.5, height = 3)
+
 ```
 
 
@@ -151,4 +158,7 @@ k <- k + 1
 
 ```{r}
 fig6
+
+ggsave(file = here("figures/fig4.png"), width = 4.5, height = 3)
+
 ```

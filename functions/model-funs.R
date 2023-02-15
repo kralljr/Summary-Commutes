@@ -149,7 +149,7 @@ plot_cat_sens <- function(reslist, myterm) {
   sh <- rep(c(15 : 18, 8), 4)
   g1 <- ggplot(lista, aes(y = term, x = estimate)) +
     geom_pointrange(aes(xmin = conf.low, xmax = conf.high, shape = name, linetype = name, colour = name),
-                    position = position_dodge(0.2)) +
+                    position = position_dodge(0.6)) +
     scale_colour_manual(values = cols, name = "Model", breaks = c("All road features", "Rush", "Ambient PM2.5",
                                                                   "Meteorology", "Main")) +
     scale_shape_manual(name = "Model", values= sh, breaks = c("All road features", "Rush", "Ambient PM2.5",
@@ -370,7 +370,7 @@ plot_nocat_sens2 <- function(reslist, myterm, reslist2, myterm2) {
                          labels = c("Speed", "Roadiness")))
   g2 <- ggplot(lista2, aes(y = term, x = estimateIQR)) +
     geom_pointrange(aes(xmin = conf.lowIQR, xmax = conf.highIQR,
-                    colour = name, shape = name, linetype = name), position = position_dodge(0.2)) +
+                    colour = name, shape = name, linetype = name), position = position_dodge(0.6)) +
     scale_colour_manual(values = cols, name = "Model", breaks = c("All road features", "Rush", "Ambient PM2.5",
                                                                   "Meteorology", "Main")) +
     scale_shape_manual(name = "Model", values = c(15 : 18, 8), breaks = c("All road features", "Rush", "Ambient PM2.5",
