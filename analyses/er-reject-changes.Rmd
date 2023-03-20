@@ -1,0 +1,102 @@
+---
+title: 'Roadiness: analysis'
+author: "Jenna Krall"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(knitr)
+library(here)
+library(lme4)
+library(broom.mixed)
+library(ggthemes)
+library(nlme)
+library(forcats)
+library(gtools)
+library(patchwork)
+library(RColorBrewer)
+# library(lmeInfo)
+
+```
+
+
+```{r}
+# load data
+load(here("data/rcomm2.RData"))
+
+
+# load iqrs
+load(here("data/iqrs.RData"))
+
+# get functions for models
+source(here("functions/model-funs.R"))
+
+
+
+```
+
+
+
+# Correlation between model components
+
+```{r}
+library(corrplot)
+
+corr1 <- dplyr::select(rcommLM, srness, mph, daily, obsdiff, awnd,
+                       tmax, tmin, RH) %>%
+  rename(Roadiness = srness, Speed = mph, DailyPM = daily, HourlyDevPM = obsdiff, WindSpeed = awnd, MaxTemp = tmax, MinTemp = tmin, Humid = RH) %>%
+  cor()
+corrplot(corr1)
+
+
+
+data.frame(corr1, var1 = rownames(corr1)) %>%
+  pivot_longer(-var1) %>%
+  mutate(abscor = abs(value)) %>%
+  filter(abscor > 0.5 & abscor < 1) %>%
+  kable(digits = 2)
+
+ind <- upper.tri(corr1) * 1
+
+options(knitr.kable.NA = '')
+corr1b <- corr1 * ind 
+corr1b[which(corr1b == 0)] <- NA
+corr1b <- corr1b %>%
+  data.frame() %>%
+  slice(-nrow(corr1b)) %>%
+  kable(digits = 2)
+corr1b
+
+```
+
+
+## Daily level only (no difference)
+
+```{r}
+
+corr2 <- dplyr::select(rcommLM, daily, awnd,
+                       tmax, tmin, RH) %>%
+  unique() %>%
+  cor()
+corrplot(corr2)
+
+data.frame(corr2, var1 = rownames(corr2)) %>%
+  pivot_longer(-var1) %>%
+  mutate(abscor = abs(value)) %>%
+  filter(abscor > 0.5 & abscor < 1) %>% kable(digits = 2)
+
+```
+
+
+
+
+```{r}
+
+save(corr1b, file = here("results/er-reject-res.RData"))
+```

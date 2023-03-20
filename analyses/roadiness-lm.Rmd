@@ -194,28 +194,11 @@ resl <- list(Main = res1,  Meteorology = res2, `Ambient PM2.5` = res3,  Rush = r
 reslrn <- resl
 ```
 
-
-
-```{r, eval = F}
-# check nonlinearity
-rcomm1U <- mutate(rcomm1, qsrness = quantcut(srness), qmph = quantcut(mph)) 
-
-
-eqn1 <- "lPM ~ qsrness"
-rer = "~timemin | ID / id3"
-re <-  "~ 1| ID / id3"
-cs1 <- corAR1(form = formula(rer))
-lme1 <- lme(formula(eqn1),
-              random= formula(re),
-              data=rcomm1U, correlation= cs1)
-
-summary(lme1)
-```
-
 ```{r}
 plot_nocat_sens(resl, "srness")
 
 ```
+
 
 
 
@@ -314,28 +297,13 @@ res5 <- get_lme(rcomm1, iqrs, eqn5, re = "~ 1| ID / id3")
 resl <- list(Main = res1,  Meteorology = res2, `Ambient PM2.5` = res3,  Rush = res4, `All road features` = res5)
 ```
 
-### no evidence for non linearity
-
-```{r, eval = F}
-# check nonlinearity
-# rcomm1U <- mutate(rcomm1, qsrness = quantcut(srness), qmph = quantcut(mph)) 
-
-
-eqn1 <- "lPM ~ qmph"
-rer = "~timemin | ID / id3"
-re <-  "~ 1| ID / id3"
-cs1 <- corAR1(form = formula(rer))
-lme1 <- lme(formula(eqn1),
-              random= formula(re),
-              data=rcomm1U, correlation= cs1)
-
-summary(lme1)
-```
-
 ```{r}
 plot_nocat_sens(resl, "mph")
 
 ```
+
+
+
 
 ```{r}
 
@@ -343,6 +311,37 @@ fig6 <- plot_nocat_sens2(reslrn, "srness", resl, "mph")
 fig6
 # g1 + g2+ plot_layout(guides = "collect") & theme(legend.position = 'top')
 ```
+
+
+### Non linearity
+
+```{r, eval = T}
+# check nonlinearity
+# rcomm1U <- mutate(rcomm1, qsrness = quantcut(srness), qmph = quantcut(mph)) 
+
+
+qeqn1 <- "lPM ~ qmph"
+qrer = "~timemin | ID / id3"
+qre <-  "~ 1| ID / id3"
+qcs1 <- corAR1(form = formula(qrer))
+qlme1 <- lme(formula(qeqn1),
+              random= formula(qre),
+              data=rcomm1U, correlation= qcs1)
+
+summary(qlme1)
+
+
+qeqn1 <- "lPM ~ qsrness"
+qrer = "~timemin | ID / id3"
+qre <-  "~ 1| ID / id3"
+qcs1 <- corAR1(form = formula(qrer))
+qlme2 <- lme(formula(qeqn1),
+              random= formula(qre),
+              data=rcomm1U, correlation= qcs1)
+
+summary(qlme2)
+```
+
 
 
 
