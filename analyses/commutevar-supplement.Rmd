@@ -48,6 +48,9 @@ load(here("results/lmfig.RData"))
 # icc
 load(here("results/icc.RData"))
 
+
+# reject ER changes
+load(here("results/er-reject-res.RData"))
 ```
 
 # Tables
@@ -81,9 +84,15 @@ kable(catweath)
 ```
 
 
+## Table S`r k`. Correlations between numeric variables including road features (Road density and speed (MPH)), ambient PM$_{2.5}$ (DailyPM, daily ambient PM$_{2.5}$ and HourlyDevPM, hourly deviations from daily ambient PM$_{2.5}$), and daily meteorology (WindSpeed (m/s), MaxTemp, maximum temperature ($^{\circ}$C), MinTemp, minimum temperature ($^{\circ}$C), and Humid, relative humidity (%)).
 
+```{r}
+k <- k + 1
+```
 
-
+```{r}
+corr1b
+```
 
 ## Table S`r k`. Intraclass correlations (ICC) comparing between-participant to within-participant variability by road features, including road types and quartiles of roadiness and speed.
 

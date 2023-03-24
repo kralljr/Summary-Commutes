@@ -70,6 +70,7 @@ corr1b[which(corr1b == 0)] <- NA
 corr1b <- corr1b %>%
   data.frame() %>%
   slice(-nrow(corr1b)) %>%
+  dplyr::select(-1) %>%
   kable(digits = 2)
 corr1b
 
