@@ -94,6 +94,22 @@ data.frame(corr2, var1 = rownames(corr2)) %>%
 
 ```
 
+## Trip level only (no difference)
+
+```{r}
+corr3 <- dplyr::select(rcommLM, id3, daily, obsdiff, awnd,
+                       tmax, tmin, RH) %>%
+  unique() %>% select(-id3) %>%
+  cor()
+corrplot(corr3)
+
+data.frame(corr3, var1 = rownames(corr3)) %>%
+  pivot_longer(-var1) %>%
+  mutate(abscor = abs(value)) %>%
+  filter(abscor > 0.5 & abscor < 1) %>% kable(digits = 2)
+
+```
+
 
 
 
