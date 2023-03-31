@@ -20,6 +20,7 @@ library(nlme)
 library(forcats)
 library(gtools)
 library(patchwork)
+library(lubridate)
 library(RColorBrewer)
 # library(lmeInfo)
 
@@ -49,8 +50,8 @@ source(here("functions/model-funs.R"))
 library(corrplot)
 
 corr1 <- dplyr::select(rcommLM, srness, mph, daily, obsdiff, awnd,
-                       tmax, tmin, RH) %>%
-  rename(Roadiness = srness, Speed = mph, DailyPM = daily, HourlyDevPM = obsdiff, WindSpeed = awnd, MaxTemp = tmax, MinTemp = tmin, Humid = RH) %>%
+                       tmax, tmin, tavg, RH) %>%
+  rename(Roadiness = srness, Speed = mph, DailyPM = daily, HourlyDevPM = obsdiff, WindSpeed = awnd, MaxTemp = tmax, MinTemp = tmin, MeanTemp = tavg, Humid = RH) %>%
   cor()
 corrplot(corr1)
 
@@ -97,9 +98,9 @@ data.frame(corr2, var1 = rownames(corr2)) %>%
 ## Trip level only (no difference)
 
 ```{r}
-corr3 <- dplyr::select(rcommLM, id3, daily, obsdiff, awnd,
+corr3 <- dplyr::select(rcommLM, ID, id3, daily, obsdiff, awnd,
                        tmax, tmin, RH) %>%
-  unique() %>% select(-id3) %>%
+  unique() %>% select(-id3, -ID) %>%
   cor()
 corrplot(corr3)
 
@@ -111,7 +112,12 @@ data.frame(corr3, var1 = rownames(corr3)) %>%
 ```
 
 
+# Variability by day of week
 
+```{r}
+rcommLM2 <- mutate(rcommLM, dow = wday(date_local))
+ggplot(rcommLM2, aes(x = factor(dow), y = lPM)) + geom_boxplot()
+```
 
 ```{r}
 
