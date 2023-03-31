@@ -1,0 +1,227 @@
+---
+title: 'Roadiness: trip models'
+author: "Jenna Krall"
+date: "10/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(knitr)
+library(here)
+library(lme4)
+library(broom.mixed)
+library(ggthemes)
+library(nlme)
+library(forcats)
+library(gtools)
+library(patchwork)
+library(RColorBrewer)
+library(DescTools)
+# library(lmeInfo)
+
+```
+
+
+```{r}
+# load data
+load(here("data/rcomm2.RData"))
+
+
+# load iqrs
+load(here("data/iqrs.RData"))
+
+# get functions for models
+source(here("functions/model-funs.R"))
+
+
+
+```
+
+# Restrict to trip averages
+
+
+```{r}
+rcomm1 <- rcommLM
+
+rcomm1 <- group_by(rcomm1, id3, ID) %>%
+  summarize(srness1loc = mean(srness1loc, na.rm = T),
+            srness500loc = mean(srness500loc, na.rm = T),
+            srness1hw = mean(srness1hw, na.rm = T),
+            srness500hw = mean(srness500hw, na.rm = T),
+            mph = mean(mph, na.rm = T),
+            lPM = mean(lPM, na.rm = T),
+            awnd = awnd, daily = daily,
+            obsdiff = mean(obsdiff, na.rm = T),
+            prcpbin = prcpbin,
+            snowbin = snowbin,
+            RH = mean(RH, na.rm = T),
+            tavg = tavg,
+            rushmorn= Mode(rushmorn),
+            rusheven = Mode(rusheven),
+            cat5sm = Mode(cat5sm),
+            rtype = Mode(rtype),
+            timemin = max(timemin)) %>%
+  unique()
+```
+
+
+
+
+
+## Roadiness 
+
+```{r, cache = T}
+eqn1 <- "lPM ~ srness"
+
+rcommsr <- rename(rcomm1, srness = srness1loc)
+
+res1 <- get_lme(rcommsr, iqrs, eqn1, re = "~ 1| ID ", corr = F)
+res1rn <- res1
+
+eqn2 <- "lPM ~ srness + awnd + prcpbin + 
+               tavg +  RH + 
+               cat5sm + snowbin" 
+res2 <- get_lme(rcommsr, iqrs, eqn2, re = "~ 1| ID", corr = F)
+
+# doesnot run
+eqn3 <- "lPM ~ srness + daily  + obsdiff" 
+res3 <- get_lme(rcommsr, iqrs, eqn3, re = "~ 1| ID", corr = F)
+
+eqn3b <- "lPM ~ srness + daily" 
+res3b <- get_lme(rcommsr, iqrs, eqn3b, re = "~ 1| ID", corr = F)
+
+
+eqn4 <- "lPM ~ srness + rushmorn + rusheven" 
+res4 <- get_lme(rcommsr, iqrs, eqn4, re = "~ 1| ID", corr = F)
+
+eqn5 <- "lPM ~ rtype + mph + srness" 
+res5 <- get_lme(rcommsr, iqrs, eqn5, re = "~ 1| ID", corr = F)
+
+resl <- list(Main = res1,  Meteorology = res2, `Ambient PM2.5` = res3,  Rush = res4, `All road features` = res5)
+reslrn <- resl
+plot_nocat_sens(resl, "srness")
+
+```
+
+
+
+### Compare roadiness measures
+
+```{r, cache = T}
+
+eqn2 <- "lPM ~ srness"
+rcommsr <- rename(rcomm1, srness = srness500loc)
+res2 <- get_lme(rcommsr, iqrs, eqn1, re = "~ 1| ID", corr = F)
+
+
+eqn3 <- "lPM ~ srness"
+rcommsr <- rename(rcomm1, srness = srness1hw)
+res3 <- get_lme(rcommsr, iqrs, eqn1, re = "~ 1| ID ", corr = F)
+
+eqn4 <- "lPM ~ srness"
+rcommsr <- rename(rcomm1, srness = srness500hw)
+res4 <- get_lme(rcommsr, iqrs, eqn1, re = "~ 1| ID ", corr = F)
+
+resSR <- list(Loc1 = res1,  Loc500 = res2, HW1 = res3,  HW500 = res4)
+plot_nocat_sens(resSR, "srness")
+
+
+rcomm1 <- rename(rcomm1, srness = srness1loc)
+
+```
+
+
+
+## Road type 
+
+```{r, cache = T}
+rcomm1b <- dplyr::filter(rcomm1, rtype != "Other")
+eqn1 <- "lPM ~ rtype"
+res1 <- get_lme(rcomm1b, iqrs, eqn1, re = "~ 1| ID", corr = F)
+
+res1rt <- res1
+
+eqn2 <- "lPM ~ rtype + awnd + prcpbin + 
+               tavg +  RH + 
+               cat5sm + snowbin" 
+res2 <- get_lme(rcomm1b, iqrs, eqn2, re = "~ 1| ID", corr = F)
+
+
+
+eqn3 <- "lPM ~ rtype + daily + obsdiff"
+res3 <- get_lme(rcomm1b, iqrs, eqn3, re = "~ 1| ID", corr = F)
+
+
+eqn4 <- "lPM ~ rtype + rushmorn + rusheven" 
+res4 <- get_lme(rcomm1b, iqrs, eqn4, re = "~ 1| ID", corr = F)
+
+
+eqn5 <- "lPM ~ rtype + mph + srness" 
+res5 <- get_lme(rcomm1b, iqrs, eqn5, re = "~ 1| ID", corr = F)
+
+
+resl <- list(Main = res1,  Meteorology = res2, `Ambient PM2.5` = res3,  Rush = res4, `All road features` = res5)
+reslrt <- resl
+
+ plot_cat_sens(reslrt, "rtype")
+
+```
+
+
+
+
+## Speed 
+
+```{r}
+eval1 <- T
+```
+
+
+```{r, eval = eval1, cache = T}
+eqn1 <- "lPM ~ mph"
+res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID", corr = F)
+res1sp <- res1
+
+
+eqn2 <- "lPM ~ mph + awnd + prcpbin + 
+               tavg +  RH + 
+               cat5sm + snowbin" 
+res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID", corr = F)
+
+# doesnot run
+eqn3 <- "lPM ~ mph + obsdiff + daily" 
+res3 <- get_lme(rcomm1, iqrs, eqn3, re = "~ 1| ID", corr = F)
+
+eqn3b <- "lPM ~ mph + daily" 
+res3b <- get_lme(rcomm1, iqrs, eqn3b, re = "~ 1| ID", corr = F)
+
+
+eqn4 <- "lPM ~ mph + rushmorn + rusheven" 
+res4 <- get_lme(rcomm1, iqrs, eqn4, re = "~ 1| ID", corr = F)
+
+
+eqn5 <- "lPM ~ rtype + mph + srness" 
+res5 <- get_lme(rcomm1, iqrs, eqn5, re = "~ 1| ID", corr = F)
+
+resl <- list(Main = res1,  Meteorology = res2, `Ambient PM2.5` = res3,  Rush = res4, `All road features` = res5)
+plot_nocat_sens(resl, "mph")
+resls <- resl
+```
+
+
+
+
+```{r}
+
+fig6 <- plot_nocat_sens2(reslrn, "srness", resl, "mph") 
+fig6
+# g1 + g2+ plot_layout(guides = "collect") & theme(legend.position = 'top')
+```
+
+
