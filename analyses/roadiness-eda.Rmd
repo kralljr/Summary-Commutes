@@ -384,7 +384,7 @@ L1 variables: I created as 1 day lag
 
 ```{r}
 
-weather1 <- dplyr::select(rcomm, date_local, ID, awnd : RH, snowbin: prcpbinL1m) %>%
+weather1 <- dplyr::select(rcomm, date_local, ID, awnd : RH, snowbin: prcpbinL1m, tavg) %>%
   unique() %>%
   dplyr::select( -contains("wdf")) 
 
@@ -427,7 +427,7 @@ snowptab%>%
 
 NOTE: Don't use-- this is by observation and not for person-days
 ```{r}
-weather1b <- dplyr::select(rcomm, date_local, ID, group, awnd : snowL1m,snowbin: prcpbinL1m) %>%
+weather1b <- dplyr::select(rcomm, date_local, ID, group, awnd : snowL1m,snowbin: prcpbinL1m, tavg) %>%
   unique() %>%
   dplyr::select(-contains("wdf"))
 
@@ -443,10 +443,11 @@ contweat%>%
   kable(digits = 2)
 
 
-contweat1 <- dplyr::filter(contweat, name %in% c("awnd", "tmax", "tmin")) %>%
+contweat1 <- dplyr::filter(contweat, name %in% c("awnd", "tmax", "tmin", "tavg")) %>%
   mutate(name = case_when(name == "awnd"~ "Wind speed (m/s)",
                           name == "tmax" ~ "Maximum temp (C)",
-                          name == "tmin" ~ "Minimum temp (C)"),
+                          name == "tmin" ~ "Minimum temp (C)",
+                          name == "tavg" ~ "Average temp (C)"),
          mean = round(mean, 1), sd = round(sd, 1),
          MeanSD = paste0(mean, " (", sd, ")")) %>%
   dplyr::select(name, MeanSD) %>%
