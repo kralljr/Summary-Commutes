@@ -52,7 +52,7 @@ get_lme <- function(data1, iqrs, eqn1, rer = "~timemin | ID / id3",
 
 
   # get intervals for variance components
-  if(intervals) {
+  if(intervals & corr) {
     print(intervals)
     int1 <- intervals(lme1)
     reint <- int1$reStruct
@@ -66,7 +66,7 @@ get_lme <- function(data1, iqrs, eqn1, rer = "~timemin | ID / id3",
     re <- mutate(re, name = c("sigma", names(reint))) %>%
       rename(est= `est.`)
 
-  } else {
+  } else if(corr != F){
     sigs <- lme1$sigma
 
     re1 <- coef(lme1$modelStruct$reStruct, unconstrained = F) %>% sqrt()
@@ -127,6 +127,40 @@ plot_re <- function(re) {
 
 
 
+plot_cat_sens_simp <- function(reslist, myterm) {
+  nc <- nchar(myterm)
+  list1 <- lapply(reslist, function(x) filter(x$t1, substr(term, 1, nc) == myterm))
+  for(i in 1 : length(list1)) {
+    list1[[i]] <- mutate(list1[[i]], name = names(reslist)[i])
+    if(i == 1) {
+      lista <- list1[[i]]
+    } else {
+      lista <- bind_rows(lista, list1[[i]])
+    }
+  }
+  lista <- mutate(lista, name = factor(name, levels = names(reslist)),
+                  term = substring(term, nc + 1),
+                  term = factor(term, levels = rev(c("High/SecHigh","Other", "LocalConn")),
+                                labels = rev(c("Highway", "Ramp/Tunnel","LocalConn"))))
+
+  cols <- rep(brewer.pal(8, "Dark2"), 2)
+  lt <- rep(c(1, 1, 1, 1, 1), 4)
+  sh <- rep(c(15 : 18, 8), 4)
+  g1 <- ggplot(lista, aes(y = term, x = estimate)) +
+    geom_pointrange(aes(xmin = conf.low, xmax = conf.high, shape = name, linetype = name, colour = name),
+                    position = position_dodge(0.6)) +
+    scale_colour_manual(values = cols, name = "Model") +
+    scale_shape_manual(name = "Model", values= sh) +
+    scale_linetype_manual(name = "Model", values = lt) +
+    geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
+    ylab("") +
+    xlab(expression(atop(paste("Change in log PM"[2.5]," (log ",mu,"g/m"^3, ")"), "compared to local roads"))) +
+    theme_bw() +
+    theme(text = element_text(size = 12), legend.position = "right")
+  list(fig = g1, tab = lista)
+
+
+}
 
 plot_cat_sens <- function(reslist, myterm) {
   nc <- nchar(myterm)
