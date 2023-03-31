@@ -1,0 +1,251 @@
+---
+title: 'Regression sensivity'
+author: "Jenna Krall"
+date: "10/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(knitr)
+library(splines)
+library(here)
+library(lme4)
+library(broom.mixed)
+library(ggthemes)
+library(nlme)
+library(forcats)
+library(gtools)
+library(patchwork)
+library(RColorBrewer)
+# library(lmeInfo)
+
+```
+
+
+```{r}
+# load data
+load(here("data/rcomm2.RData"))
+
+
+# load iqrs
+load(here("data/iqrs.RData"))
+
+# get functions for models
+source(here("functions/model-funs.R"))
+
+load(here("results/mainmod.RData"))
+
+```
+
+```{r}
+rcomm1 <- rcommLM
+```
+
+# Meteorology:
+
+Check roadiness-sens, roadiness-lm to show no impact
+
+# Interaction
+
+
+## Speed * Road type
+
+No role
+Meteorology: interaction
+
+```{r, eval = T}
+eqn1 <- "lPM ~ mph * rtype"
+res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3")
+res1$t1 %>% dplyr::select(term, estimate, p.value, conf.low, conf.high) %>%
+  dplyr::filter(!is.na(estimate))
+# ACF(res1$lme1, resType = "normalized", maxLag = 30) %>% plot()
+ 
+resl <- list(Main = resls[[1]], Int = res1 )
+
+plot_nocat_sens(resl, "mph")
+
+resl <- list(Main = reslrt[[1]], Meteorology = res1 )
+
+
+plot_cat_sens(resl, "rtype")
+
+```
+
+
+
+
+### Non linearity
+
+```{r, eval = T}
+# check nonlinearity
+rcommQ <- mutate(rcomm1, qsrness = quantcut(srness), qmph = quantcut(mph)) 
+
+
+qeqn1 <- "lPM ~ qmph"
+qrer = "~timemin | ID / id3"
+qre <-  "~ 1| ID / id3"
+qcs1 <- corAR1(form = formula(qrer))
+qlme1 <- lme(formula(qeqn1),
+              random= formula(qre),
+              data=rcommQ, correlation= qcs1)
+
+
+speed <- tidy(qlme1, conf.int = T) %>%
+  mutate(quart = c("int", paste0("Q", seq(2, 4))), type = "Speed") %>%
+  dplyr::select(-effect, -term)
+
+qeqn1 <- "lPM ~ qsrness"
+qrer = "~timemin | ID / id3"
+qre <-  "~ 1| ID / id3"
+qcs1 <- corAR1(form = formula(qrer))
+qlme2 <- lme(formula(qeqn1),
+              random= formula(qre),
+              data=rcommQ, correlation= qcs1)
+
+srness <- tidy(qlme2, conf.int = T) %>%
+  mutate(quart = c("int", paste0("Q", seq(2, 4))), type = "Roadiness") %>%
+  dplyr::select(-effect, -term)
+
+```
+
+
+```{r}
+nonlin <- full_join(speed, srness) %>%
+  dplyr::filter(quart != "int")
+cols <- rev(brewer.pal(5, "Reds")[-c(1, 2)])
+nonlin <- ggplot(nonlin, aes(x = estimate, y = type, colour = quart, shape = quart)) +
+  geom_pointrange(aes(xmin = conf.low, xmax = conf.high), position = position_dodge(0.6)) +
+  scale_shape(name = "Quartile", breaks = rev(c("Q2", "Q3", "Q4"))) +
+  scale_color_manual(name = "Quartile", values = cols, breaks = rev(c("Q2", "Q3", "Q4"))) +
+   geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
+    ylab("") +
+    xlab(expression(atop(paste("Change in log PM"[2.5]," (log ",mu,"g/m"^3, ")"), "compared to first quartile (Q1)"))) +
+    theme_bw() +
+    theme(text = element_text(size = 12), legend.position = "right")
+```
+
+
+# Nonlinear covariates: Meteorology
+
+```{r}
+ggplot(rcomm1, aes(x = awnd, y = lPM)) + geom_point() + geom_smooth(span = 0.75, method = "loess")
+
+
+ggplot(rcomm1, aes(x = tavg, y = lPM)) + geom_point() + geom_smooth(span = 1, method = "loess")
+
+ggplot(rcomm1, aes(x = RH, y = lPM)) + geom_point() + geom_smooth(span = 1, method = "loess")
+```
+## Speed
+
+```{r, eval =T}
+eqn2 <- "lPM ~ mph + ns(awnd, 3) + prcpbin + tavg +  RH + cat5sm + snowbin" 
+res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+
+eqn2 <- "lPM ~ mph + awnd + prcpbin + ns(tavg, 3) +  RH + cat5sm + snowbin" 
+res3 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+
+eqn2 <- "lPM ~ mph + awnd + prcpbin + tavg +  ns(RH, 3) + cat5sm + snowbin" 
+res4 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+
+resl <- list(Main = resls[["Meteorology"]], SplineWind = res2,
+             SplineTemp = res3, SplineRH = res4)
+
+plot_nocat_sens(resl, "mph")
+```
+
+## Road type
+```{r}
+
+eqn2 <- "lPM ~ rtype + ns(awnd, 3) + prcpbin + tavg +  RH + cat5sm + snowbin" 
+res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+
+eqn2 <- "lPM ~ rtype + awnd + prcpbin + ns(tavg, 3) +  RH + cat5sm + snowbin" 
+res3 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+
+eqn2 <- "lPM ~ rtype + awnd + prcpbin + tavg +  ns(RH, 3) + cat5sm + snowbin" 
+res4 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+
+resl <- list(Main = reslrt[["Meteorology"]], SplineWind = res2,
+             SplineTemp = res3, SplineRH = res4)
+
+plot_cat_sens_simp(resl, "rtype")
+```
+
+## Roadiness
+
+```{r}
+
+eqn2 <- "lPM ~ srness + ns(awnd, 3) + prcpbin + tavg +  RH + cat5sm + snowbin" 
+res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+
+eqn2 <- "lPM ~ srness + awnd + prcpbin + ns(tavg, 3) +  RH + cat5sm + snowbin" 
+res3 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+
+eqn2 <- "lPM ~ srness + awnd + prcpbin + tavg +  ns(RH, 3) + cat5sm + snowbin" 
+res4 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+
+resl <- list(Main = reslrn[["Meteorology"]], SplineWind = res2,
+             SplineTemp = res3, SplineRH = res4)
+
+plot_nocat_sens(resl, "srness")
+```
+
+
+
+
+# Nonlinear covariates: Hourly PM
+
+
+```{r}
+ggplot(rcomm1, aes(x = obsdiff, y = lPM)) +
+  geom_point() +
+  geom_smooth()
+```
+## Speed
+
+```{r, eval =T}
+eqn2 <- "lPM ~ mph + daily + ns(obsdiff, 5)" 
+res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+
+resl <- list(Main = resls[["Ambient PM2.5"]], SplineHourly = res2)
+
+plot_nocat_sens(resl, "mph")
+```
+
+## Road type
+```{r}
+
+eqn2 <- "lPM ~ rtype + daily + ns(obsdiff, 5)" 
+res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+
+resl <- list(Main = reslrt[["Ambient PM2.5"]], SplineHourly = res2)
+
+
+plot_cat_sens_simp(resl, "rtype")
+```
+
+## Roadiness
+
+```{r}
+
+eqn2 <- "lPM ~ srness + daily + ns(obsdiff, 5)" 
+res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+
+resl <- list(Main = reslrn[["Ambient PM2.5"]], SplineHourly = res2)
+
+plot_nocat_sens(resl, "srness")
+```
+
+
+
+# Save
+```{r}
+save(nonlin, file = here("results/sens-er.RData"))
+
+```
