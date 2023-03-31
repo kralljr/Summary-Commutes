@@ -29,6 +29,11 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
     - Input: roadinessr.RData, unique_commutes_df
     - Creates: points_gricell.Rdata: Roadiness for each lat/lon (look at roadiness plots)
 
+5b. new-roadiness.R: File for new roadiness metrics
+
+    - Input: unique_commutes_df.Rdata, gpslatlon.RData, roadiness_500m_hw_loc.fst, roadiness_1km_hw_loc.fst
+    - Creates:  points_gricell-new.RData
+
 6. find-roads.R: 
 
     - Input: gpslatlon.RData (GPS GEST DC data to Lucas), Road types from Lucas: gps_road_assigned.csv.  Note: needed reduced lat/lon data for merge with rtypes (vs. roadiness grid cells)
@@ -38,6 +43,7 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
 
     - Input: points_gricell.Rdata, pm-cont-data-1minrti.RData (RTI adjusted PM), rtypes.RData
     - Creates: roadiness_commutes.Rdata (labels rtypes.  rtype is mode, rtype2 is mean-- has PM + road info), pm-cleaned.RData (pm data without GPS)
+    - Needed to be fixed to handle new roadiness metrics
     - Use to see number of participants N=25
     
 8. clean-va.R: File to get PM for daily VA, hourly avg
@@ -71,6 +77,7 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
 11. fix-data.R: File to fix variables based on EDA
 
     - Input: rcomm.RData, speed.RData
+    - Needed to be fixed to handle new roadiness metrics
     - Output: rcomm2.RData (includes formatted for lm)
     
 12. iqrs-weath.R: File to create IQRs for interpreting lm results

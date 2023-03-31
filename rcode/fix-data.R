@@ -120,15 +120,25 @@ rcomm2 <- mutate(rcomm,
 
 
                 ### STDIZE ROADINESS
-                means = mean(rness), sdd = sd(rness), srness = (rness - means) / sdd) %>%
-  select(-c("means", "sdd"))
+                means = mean(rness1loc), sdd = sd(rness1loc),
+                srness1loc = (rness1loc - means) / sdd,
+
+                means = mean(rness500loc), sdd = sd(rness500loc),
+                srness500loc = (rness500loc - means) / sdd,
+
+                means = mean(rness1hw), sdd = sd(rness1hw),
+                srness1hw = (rness1hw - means) / sdd,
+
+                means = mean(rness500hw), sdd = sd(rness500hw),
+                srness500hw = (rness500hw - means) / sdd) %>%
+  dplyr::select(-c("means", "sdd"))
 
 
 # mode of road type
 rcomm2 <- group_by(rcomm2, ID, date_local, group) %>%
   mutate(rtypeMode = Mode(rtype), stime = min(rdatetime),
                   timemin = as.numeric((rdatetime - stime)/60) ) %>% ungroup() %>%
-  select(-stime)
+  dplyr::select(-stime)
 
 
 
@@ -165,7 +175,8 @@ rcomm <- mutate(rcomm2, lPM = log(PM + shift),
 #               obsdiff, ID,date_local, group, cat5sm, timemin, lPM,
 #               awndL1 , prcpbinL1 , rdatetime, rushmorn, rusheven,
 #               tmaxL1, tminL1, snowbinL1m, RH )  %>%
-rcommLM <- dplyr::select(rcomm, srness, rtype, mph, id3, PM, daily,
+rcommLM <- dplyr::select(rcomm, srness1loc, srness500loc, srness1hw, srness500hw,
+                         rtype, mph, id3, PM, daily,
                         obsdiff, ID,date_local, group, cat5sm, timemin, lPM,
                         awnd , prcpbin , rdatetime, rushmorn, rusheven,
                         tmax, tmin, tavg, snowbin, RH )  %>%

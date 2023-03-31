@@ -8,7 +8,7 @@ rcomm1 <- rcommLM
 
 iqrs <- dplyr::select(rcomm1, -any_of(c("PM", "lPM", "ID", "date_local", "rdatetime",
                                         "group",   "prcpbin", "snowbin", "rtype", "id3", "cat5sm"))) %>%
-  pivot_longer(srness : RH) %>%
+  pivot_longer(srness1loc : RH) %>%
   group_by(name)
 
 iqrs <- iqrs %>%

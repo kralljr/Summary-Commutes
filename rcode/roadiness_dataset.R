@@ -8,7 +8,7 @@ library(tidyverse)
 ## ============================================
 #  get roadiness gridcell data :
 ## ============================================
-load(here("data/points_gricell.Rdata"))
+load(here("data/points_gricell-new.Rdata"))
 load(here("data/rtypes.RData"))
 
 # get GPS data
@@ -26,7 +26,7 @@ rtypes <- dplyr::select(rtypes, TNMFRC)
 cdat0 <- bind_cols(cdat0, points_gridcell[, -c(1, 2)]) %>%
   bind_cols(., rtypes)
 # remove PA
-cdat0 <- filter(cdat0, !is.na(leng.distm2_scale))
+cdat0 <- filter(cdat0, !is.na(leng.distm2_loc_scale))
 
 tripdata <- mutate(cdat0, tripid = paste0(ID, Trip)) %>%
   arrange(tripid, datetime)
@@ -35,9 +35,9 @@ tripdata <- mutate(cdat0, tripid = paste0(ID, Trip)) %>%
 
 # check sample size
 # 36
-select(gpslatlon$dat, ID) %>% unique() %>% nrow()
+dplyr::select(gpslatlon$dat, ID) %>% unique() %>% nrow()
 # 28: missing = 1
-select(cdat0, ID) %>% unique() %>% nrow()
+dplyr::select(cdat0, ID) %>% unique() %>% nrow()
 
 
 
@@ -50,12 +50,20 @@ lev1 <- c(seq(1, 5), 8)
 lab1 <- c("High/SecHigh", "High/SecHigh","LocalConn", "Local", "Other", "Other")
 
 cdat <- cdat0 %>% mutate(rdatetime = as_datetime(rdatetime, tz = "America/New_York")) %>%
-  rename(rness = leng.distm2_scale) %>%
+  rename(rness1loc = leng.distm2_loc_scale,
+         rness500loc = leng.distm2_loc_scale500,
+         rness1hw = leng.distm2_hw_scale,
+         rness500hw = leng.distm2_hw_scale500) %>%
   # remove latitude and longitude
   # TNMFRC contains 5 and 8s only for other
-  dplyr::select(ID, rdatetime, rness, TNMFRC) %>%
+  dplyr::select(ID, rdatetime, rness1loc,
+                rness500loc, rness1hw, rness500hw, TNMFRC) %>%
   group_by(ID, rdatetime) %>%
-  summarize(rness = mean(rness), rtype = Mode(TNMFRC),
+  summarize(rness1loc = mean(rness1loc),
+            rness500loc = mean(rness500loc),
+            rness1hw = mean(rness1hw),
+            rness500hw = mean(rness500hw),
+            rtype = Mode(TNMFRC),
             rtype = factor(rtype, levels= lev1, labels = lab1)) %>%
   unique()
 

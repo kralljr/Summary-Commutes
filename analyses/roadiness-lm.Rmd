@@ -19,6 +19,7 @@ library(broom.mixed)
 library(ggthemes)
 library(nlme)
 library(forcats)
+library(lubridate)
 library(gtools)
 library(patchwork)
 library(RColorBrewer)
@@ -46,8 +47,7 @@ source(here("functions/model-funs.R"))
 
 
 Meteorology:
-- Lag 1: max temp, min temp, wind speed, precipitation
-- Lead snow
+- Mean temp, RH, wind speed, precipitation, snow, wind direction
 
 
 ```{r}
@@ -88,7 +88,16 @@ rcomm1 %>%
 
 ```{r, cache = T}
 
-g1 <- ggplot(rcomm1, aes(x = srness, y = lPM)) +
+g1 <- ggplot(rcomm1, aes(x = srness1loc, y = lPM)) +
+   geom_point() +geom_smooth() 
+
+g1b <- ggplot(rcomm1, aes(x = srness500loc, y = lPM)) +
+   geom_point() +geom_smooth() 
+
+g1c <- ggplot(rcomm1, aes(x = srness1hw, y = lPM)) +
+   geom_point() +geom_smooth() 
+
+g1d <- ggplot(rcomm1, aes(x = srness500hw, y = lPM)) +
    geom_point() +geom_smooth() 
 
 
@@ -108,15 +117,22 @@ g5 <- ggplot(rcomm1, aes(x = tmax, y = lPM)) +
 g6 <- ggplot(rcomm1, aes(x = tmin, y = lPM)) +
    geom_point() +geom_smooth() 
 
+
+g6b <- ggplot(rcomm1, aes(x = tavg, y = lPM)) +
+   geom_point() +geom_smooth() 
+
 g7 <- ggplot(rcomm1, aes(x = timemin, y = lPM)) +
    geom_point() +geom_smooth() 
 
 g8 <- ggplot(rcomm1, aes(x = mph, y = lPM)) +
    geom_point() +geom_smooth() 
 
-(g1 + g2 + g3 ) / (g4 + g5 + g6 ) 
 
-g7 + g8
+(g1 + g1b) / (g1c + g1d)
+
+(g2 + g3 ) / (g4 + g5 + g6 ) 
+
+(g6b + g7) / g8
 ```
 
 
@@ -156,48 +172,113 @@ rcomm1 <- group_by(rcomm1, ID, id3) %>%
 
 ## Roadiness 
 
+
+
+### Local roads, 1 km
+
 ```{r, cache = T}
+rcommsr <- rename(rcomm1, srness = srness1loc)
+
 eqn1 <- "lPM ~ srness"
-res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3")
+res1 <- get_lme(rcommsr, iqrs, eqn1, re = "~ 1| ID / id3")
 res1rn <- res1
 ACF(res1$lme1, resType = "normalized", maxLag = 30) %>% plot()
- 
+
+```
+
+```{r, eval = F}
+aug1 <- res1$aug %>% mutate(dow = wday(date_local))
+ggplot(aug1, aes(x = factor(dow), y= .resid)) + geom_boxplot()
+
+rcomm1b <- mutate(rcommsr, dow = wday(date_local))
+eqn0 <- "lPM ~ srness + dow"
+res0 <- get_lme(rcomm1b, iqrs, eqn0, re = "~ 1| ID / id3")
+
+res0$t1[1 , 1 : 7]
+res1$t1[1 , 1 : 7]
+```
+
+```{r}
+
 ggplot(res1$re, aes(x = est, y = name)) + 
   geom_pointrange(aes(xmin = lower, xmax = upper )) +
   xlab("Estimate") + ylab("")
 
-eqn2 <- "lPM ~ srness + awnd + prcpbin + 
+eqn2b <- "lPM ~ srness + awnd + prcpbin + 
                tmax  + tmin +  RH + 
                cat5sm + snowbin" 
-res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+res2b <- get_lme(rcommsr, iqrs, eqn2b, re = "~ 1| ID / id3")
+
+
+eqn2 <- "lPM ~ srness + awnd + prcpbin + 
+               tavg +  RH + 
+               cat5sm + snowbin" 
+res2 <- get_lme(rcommsr, iqrs, eqn2, re = "~ 1| ID / id3")
 # ACF(res2$lme1, resType = "normalized", maxLag = 30) %>% plot()
 
 # doesnot run
 eqn3 <- "lPM ~ srness + daily  + obsdiff" 
-res3 <- get_lme(rcomm1, iqrs, eqn3, re = "~ 1| ID / id3")
+res3 <- get_lme(rcommsr, iqrs, eqn3, re = "~ 1| ID / id3")
 # ACF(res3$lme1, resType = "normalized", maxLag = 30) %>% plot()
 
 eqn3b <- "lPM ~ srness + daily" 
-res3b <- get_lme(rcomm1, iqrs, eqn3b, re = "~ 1| ID / id3")
+res3b <- get_lme(rcommsr, iqrs, eqn3b, re = "~ 1| ID / id3")
 # ACF(res3b$lme1, resType = "normalized", maxLag = 30) %>% plot()
 
 
 eqn4 <- "lPM ~ srness + rushmorn + rusheven" 
-res4 <- get_lme(rcomm1, iqrs, eqn4, re = "~ 1| ID / id3")
+res4 <- get_lme(rcommsr, iqrs, eqn4, re = "~ 1| ID / id3")
 # ACF(res4$lme1, resType = "normalized", maxLag = 30) %>% plot()
 
 eqn5 <- "lPM ~ rtype + mph + srness" 
-res5 <- get_lme(rcomm1, iqrs, eqn5, re = "~ 1| ID / id3")
+res5 <- get_lme(rcommsr, iqrs, eqn5, re = "~ 1| ID / id3")
 
-
-resl <- list(Main = res1,  Meteorology = res2, `Ambient PM2.5` = res3,  Rush = res4, `All road features` = res5)
-reslrn <- resl
 ```
 
+Old models with min/max temp
 ```{r}
+resl <- list(Main = res1,  Meteorology = res2b, `Ambient PM2.5` = res3,  Rush = res4, `All road features` = res5)
+plot_nocat_sens(resl, "srness")
+```
+
+Main models with avg temp
+```{r}
+resl <- list(Main = res1,  Meteorology = res2, `Ambient PM2.5` = res3,  Rush = res4, `All road features` = res5)
+reslrn <- resl
 plot_nocat_sens(resl, "srness")
 
 ```
+
+
+
+
+
+
+### Compare roadiness measures
+
+```{r, cache = T}
+
+eqn2 <- "lPM ~ srness"
+rcommsr <- rename(rcomm1, srness = srness500loc)
+res2 <- get_lme(rcommsr, iqrs, eqn1, re = "~ 1| ID / id3")
+
+
+eqn3 <- "lPM ~ srness"
+rcommsr <- rename(rcomm1, srness = srness1hw)
+res3 <- get_lme(rcommsr, iqrs, eqn1, re = "~ 1| ID / id3")
+
+eqn4 <- "lPM ~ srness"
+rcommsr <- rename(rcomm1, srness = srness500hw)
+res4 <- get_lme(rcommsr, iqrs, eqn1, re = "~ 1| ID / id3")
+
+resSR <- list(Loc1 = res1,  Loc500 = res2, HW1 = res3,  HW500 = res4)
+plot_nocat_sens(resSR, "srness")
+
+
+rcomm1 <- rename(rcomm1, srness = srness1loc)
+
+```
+
 
 
 
@@ -210,17 +291,39 @@ plot_nocat_sens(resl, "srness")
 eqn1 <- "lPM ~ rtype"
 res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3")
 ACF(res1$lme1, resType = "normalized", maxLag = 30) %>% plot()
+```
 
+
+```{r, eval = F}
+# check day of week
+aug1 <- res1$aug %>% mutate(dow = wday(date_local))
+ggplot(aug1, aes(x = factor(dow), y= .resid)) + geom_boxplot()
+ 
+rcomm1b <- mutate(rcomm1, dow = wday(date_local))
+eqn0 <- "lPM ~ rtype + dow"
+res0 <- get_lme(rcomm1b, iqrs, eqn0, re = "~ 1| ID / id3")
+
+res0$t1[1 : 3, 1 : 7]
+res1$t1[1 : 3, 1 : 7]
+```
+
+
+```{r}
 ggplot(res1$re, aes(x = est, y = name)) + 
   geom_pointrange(aes(xmin = lower, xmax = upper )) +
   xlab("Estimate") + ylab("")
 res1rt <- res1
 
 eqn2 <- "lPM ~ rtype + awnd + prcpbin + 
-               tmax  + tmin +  RH + 
+               tavg +  RH + 
                cat5sm + snowbin" 
 res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
 # ACF(res2$lme1, resType = "normalized", maxLag = 30) %>% plot()
+
+eqn2b <- "lPM ~ rtype + awnd + prcpbin + 
+               tmax  + tmin +  RH + 
+               cat5sm + snowbin" 
+res2b <- get_lme(rcomm1, iqrs, eqn2b, re = "~ 1| ID / id3")
 
 
 eqn3 <- "lPM ~ rtype + daily + obsdiff"
@@ -236,19 +339,29 @@ res4 <- get_lme(rcomm1, iqrs, eqn4, re = "~ 1| ID / id3")
 eqn5 <- "lPM ~ rtype + mph + srness" 
 res5 <- get_lme(rcomm1, iqrs, eqn5, re = "~ 1| ID / id3")
 # ACF(res4$lme1, resType = "normalized", maxLag = 30) %>% plot()
+```
 
+Old min/max temp
+```{r}
+resl <- list(Main = res1,  Meteorology = res2b, `Ambient PM2.5` = res3,  Rush = res4, `All road features` = res5)
+plot_cat_sens(resl, "rtype")
 
 resl <- list(Main = res1,  Meteorology = res2, `Ambient PM2.5` = res3,  Rush = res4, `All road features` = res5)
 reslrt <- resl
+
+
+
 ```
 
-
+Main met models
 ```{r}
+ plot_cat_sens(reslrt, "rtype")
 rtypeR <- plot_cat_sens(reslrt, "rtype")
 rtypeR$tab %>% dplyr::filter(name == "Main") %>%
   dplyr::select(term, estimate, conf.low, conf.high)
 fig5 <- rtypeR$fig
 ```
+
 
 
 
@@ -265,15 +378,39 @@ res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3")
 res1sp <- res1
 ACF(res1$lme1, resType = "normalized", maxLag = 30) %>% plot()
  
+```
+
+
+```{r, eval = F}
+aug1 <- res1$aug %>% mutate(dow = wday(date_local))
+ggplot(aug1, aes(x = factor(dow), y= .resid)) + geom_boxplot()
+
+rcomm1b <- mutate(rcomm1, dow = wday(date_local))
+eqn0 <- "lPM ~ mph + dow"
+res0 <- get_lme(rcomm1b, iqrs, eqn0, re = "~ 1| ID / id3")
+
+res0$t1[1 , 1 : 7]
+res1$t1[1 , 1 : 7]
+```
+
+```{r}
+
 ggplot(res1$re, aes(x = est, y = name)) + 
   geom_pointrange(aes(xmin = lower, xmax = upper )) +
   xlab("Estimate") + ylab("")
 
-eqn2 <- "lPM ~ mph + awnd + prcpbin + 
+eqn2b <- "lPM ~ mph + awnd + prcpbin + 
                tmax  + tmin +  RH + 
                cat5sm + snowbin" 
-res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
+res2b <- get_lme(rcomm1, iqrs, eqn2b, re = "~ 1| ID / id3")
 # ACF(res2$lme1, resType = "normalized", maxLag = 30) %>% plot()
+
+
+
+eqn2 <- "lPM ~ mph + awnd + prcpbin + 
+               tavg +  RH + 
+               cat5sm + snowbin" 
+res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
 
 # doesnot run
 eqn3 <- "lPM ~ mph + obsdiff + daily" 
@@ -292,14 +429,22 @@ res4 <- get_lme(rcomm1, iqrs, eqn4, re = "~ 1| ID / id3")
 
 eqn5 <- "lPM ~ rtype + mph + srness" 
 res5 <- get_lme(rcomm1, iqrs, eqn5, re = "~ 1| ID / id3")
-
-
-resl <- list(Main = res1,  Meteorology = res2, `Ambient PM2.5` = res3,  Rush = res4, `All road features` = res5)
 ```
 
+Old models with min.max temp
 ```{r}
+
+resl <- list(Main = res1,  Meteorology = res2b, `Ambient PM2.5` = res3,  Rush = res4, `All road features` = res5)
 plot_nocat_sens(resl, "mph")
 
+```
+
+
+Main model (avg temp)
+```{r}
+resl <- list(Main = res1,  Meteorology = res2, `Ambient PM2.5` = res3,  Rush = res4, `All road features` = res5)
+plot_nocat_sens(resl, "mph")
+resls <- resl
 ```
 
 
@@ -313,54 +458,9 @@ fig6
 ```
 
 
-### Non linearity
-
-```{r, eval = T}
-# check nonlinearity
-# rcomm1U <- mutate(rcomm1, qsrness = quantcut(srness), qmph = quantcut(mph)) 
-
-
-qeqn1 <- "lPM ~ qmph"
-qrer = "~timemin | ID / id3"
-qre <-  "~ 1| ID / id3"
-qcs1 <- corAR1(form = formula(qrer))
-qlme1 <- lme(formula(qeqn1),
-              random= formula(qre),
-              data=rcomm1U, correlation= qcs1)
-
-summary(qlme1)
-
-
-qeqn1 <- "lPM ~ qsrness"
-qrer = "~timemin | ID / id3"
-qre <-  "~ 1| ID / id3"
-qcs1 <- corAR1(form = formula(qrer))
-qlme2 <- lme(formula(qeqn1),
-              random= formula(qre),
-              data=rcomm1U, correlation= qcs1)
-
-summary(qlme2)
-```
 
 
 
-
-
-## Speed * Road type
-
-No role
-
-```{r, eval = eval1}
-eqn1 <- "lPM ~ mph * rtype"
-res1 <- get_lme(rcomm1, iqrs, eqn1, re = "~ 1| ID / id3")
-res1$t1 %>% dplyr::select(term, estimate, p.value, conf.low, conf.high) %>%
-  dplyr::filter(!is.na(estimate))
-# ACF(res1$lme1, resType = "normalized", maxLag = 30) %>% plot()
- 
-
-plot_nocat_sens(resl, "mph")
-
-```
 
 ## Lags
 
@@ -571,4 +671,5 @@ ggplot(mall, aes(x = term, y = estimate, colour = type)) + geom_pointrange(aes(y
 
 ```{r}
 save(fig5, fig6, figs7, figs8, file = here("results/lmfig.RData"))
+save(resls, reslrn, reslrt, file = here("results/mainmod.RData"))
 ```
