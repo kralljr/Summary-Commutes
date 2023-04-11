@@ -80,55 +80,7 @@ plot_cat_sens(resl, "rtype")
 
 
 
-### Non linearity
 
-```{r, eval = T}
-# check nonlinearity
-rcommQ <- mutate(rcomm1, qsrness = quantcut(srness), qmph = quantcut(mph)) 
-
-
-qeqn1 <- "lPM ~ qmph"
-qrer = "~timemin | ID / id3"
-qre <-  "~ 1| ID / id3"
-qcs1 <- corAR1(form = formula(qrer))
-qlme1 <- lme(formula(qeqn1),
-              random= formula(qre),
-              data=rcommQ, correlation= qcs1)
-
-
-speed <- tidy(qlme1, conf.int = T) %>%
-  mutate(quart = c("int", paste0("Q", seq(2, 4))), type = "Speed") %>%
-  dplyr::select(-effect, -term)
-
-qeqn1 <- "lPM ~ qsrness"
-qrer = "~timemin | ID / id3"
-qre <-  "~ 1| ID / id3"
-qcs1 <- corAR1(form = formula(qrer))
-qlme2 <- lme(formula(qeqn1),
-              random= formula(qre),
-              data=rcommQ, correlation= qcs1)
-
-srness <- tidy(qlme2, conf.int = T) %>%
-  mutate(quart = c("int", paste0("Q", seq(2, 4))), type = "Roadiness") %>%
-  dplyr::select(-effect, -term)
-
-```
-
-
-```{r}
-nonlin <- full_join(speed, srness) %>%
-  dplyr::filter(quart != "int")
-cols <- rev(brewer.pal(5, "Reds")[-c(1, 2)])
-nonlin <- ggplot(nonlin, aes(x = estimate, y = type, colour = quart, shape = quart)) +
-  geom_pointrange(aes(xmin = conf.low, xmax = conf.high), position = position_dodge(0.6)) +
-  scale_shape(name = "Quartile", breaks = rev(c("Q2", "Q3", "Q4"))) +
-  scale_color_manual(name = "Quartile", values = cols, breaks = rev(c("Q2", "Q3", "Q4"))) +
-   geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
-    ylab("") +
-    xlab(expression(atop(paste("Change in log PM"[2.5]," (log ",mu,"g/m"^3, ")"), "compared to first quartile (Q1)"))) +
-    theme_bw() +
-    theme(text = element_text(size = 12), legend.position = "right")
-```
 
 
 # Nonlinear covariates: Meteorology
@@ -180,6 +132,7 @@ plot_cat_sens_simp(resl, "rtype")
 ## Roadiness
 
 ```{r}
+rcomm1 <- mutate(rcomm1, srness = srness1hw)
 
 eqn2 <- "lPM ~ srness + ns(awnd, 3) + prcpbin + tavg +  RH + cat5sm + snowbin" 
 res2 <- get_lme(rcomm1, iqrs, eqn2, re = "~ 1| ID / id3")
@@ -244,8 +197,4 @@ plot_nocat_sens(resl, "srness")
 
 
 
-# Save
-```{r}
-save(nonlin, file = here("results/sens-er.RData"))
 
-```

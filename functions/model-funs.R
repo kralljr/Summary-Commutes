@@ -92,7 +92,8 @@ get_lme <- function(data1, iqrs, eqn1, rer = "~timemin | ID / id3",
 
 
 runlag <- function(data1, iqrs, eqn1, rer = "~timemin | ID / id3",
-                   re = "~1 | ID / id3", intervals = T, corr = T, lags = c(0)) {
+                   re = "~1 | ID / id3", intervals = T, corr = T, lags = c(0),
+                   covar = c("ID", "id3", "var" ,"lPM")) {
 
   k <- 1
   resall <- list()
@@ -100,8 +101,11 @@ runlag <- function(data1, iqrs, eqn1, rer = "~timemin | ID / id3",
     print(i)
     datlag <- group_by(data1, ID, id3) %>%
       arrange(ID, id3, rdatetime) %>%
-      mutate(var = dplyr::lag(var, lags[i])) %>%
-      dplyr::select(ID, id3, var, lPM) %>%
+      mutate(var = dplyr::lag(var, lags[i]))
+
+    datlag <- datlag[, covar]
+
+    datlag <- datlag %>%
       na.omit() %>%
       mutate(keeps = 1, timemin = cumsum(keeps))
     resall[[k]] <- get_lme(datlag, iqrs, eqn1, re = "~ 1| ID / id3",
@@ -182,10 +186,11 @@ plot_cat_sens <- function(reslist, myterm) {
   lt <- rep(c(1, 1, 1, 1, 1), 4)
   sh <- rep(c(15 : 18, 8), 4)
   g1 <- ggplot(lista, aes(y = term, x = estimate)) +
-    geom_pointrange(aes(xmin = conf.low, xmax = conf.high, shape = name, linetype = name, colour = name),
+    geom_pointrange(aes(xmin = conf.low, xmax = conf.high, shape = name, linetype = name, colour = term),
                     position = position_dodge(0.6)) +
-    scale_colour_manual(values = cols, name = "Model", breaks = c("All road features", "Rush", "Ambient PM2.5",
-                                                                  "Meteorology", "Main")) +
+    scale_colour_manual(values = cols, guide = "none") +
+    # scale_colour_manual(values = cols, name = "Model", breaks = c("All road features", "Rush", "Ambient PM2.5",
+    #                                                               "Meteorology", "Main")) +
     scale_shape_manual(name = "Model", values= sh, breaks = c("All road features", "Rush", "Ambient PM2.5",
                                                               "Meteorology", "Main")) +
     scale_linetype_manual(name = "Model", values = lt,breaks = c("All road features", "Rush", "Ambient PM2.5",
@@ -256,7 +261,7 @@ plot_cat_senslag <- function(reslist, myterm) {
                   term = factor(term, levels = rev(c("High/SecHigh","Other", "LocalConn")),
                                 labels = rev(c("Highway", "Ramp/Tunnel","LocalConn"))))
 
-  lista <- dplyr::filter(lista, name %in% c(0 : 5))
+  #lista <- dplyr::filter(lista, name %in% c(0 : 5))
 
   cols <- rep(brewer.pal(8, "Dark2"), 2)
   lt <- rep(c(1, 1, 1, 1), 4)
@@ -423,6 +428,43 @@ plot_nocat_sens2 <- function(reslist, myterm, reslist2, myterm2) {
 
 
 
+
+plot_nocat_senslag1 <- function(reslist, myterm) {
+  list1 <- lapply(reslist, function(x) filter(x$t1, term == "var"))
+  cols <- brewer.pal(8, "Dark2")
+
+  for(i in 1 : length(list1)) {
+
+    list1[[i]] <- mutate(list1[[i]], name = names(reslist)[i])
+    if(i == 1) {
+      lista <- list1[[i]]
+    } else {
+      lista <- bind_rows(lista, list1[[i]])
+    }
+
+  }
+  lista1 <- mutate(lista, name = factor(name, levels = names(reslist)),
+                   term = myterm)
+
+
+  lista2 <- lista1 %>%
+    mutate(name = as.numeric(substring(name, 4)))
+  #lista2 <- dplyr::filter(lista2, name %in% c(0: 5))
+
+  g2 <- ggplot(lista2, aes(y = name, x = estimateIQR)) +
+    geom_pointrange(aes(xmin = conf.lowIQR, xmax = conf.highIQR,
+                        colour = name),
+                    position = position_dodge2(0.2)) + #shape = name, linetype = name)
+    scale_color_gradient(name = "Lag", guide = "none") +
+    geom_vline(xintercept = 0, color = "grey50", linetype = 2) +
+    ylab("Lag") +
+    xlab(expression(atop(paste("Change in log PM"[2.5]," (log ",mu,"g/m"^3, ")" ), " per IQR increase"))) +
+    theme_bw() +
+    theme(text = element_text(size = 12), legend.position = "right")
+
+  g2
+
+}
 
 
 plot_nocat_senslag <- function(reslist, myterm, reslist2, myterm2) {

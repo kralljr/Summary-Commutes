@@ -30,7 +30,7 @@ library(RColorBrewer)
 
 ```{r}
 # load data
-load(here("data/rcomm2.RData"))
+load(here("data/rcommQ.RData"))
 
 
 # load iqrs
@@ -51,7 +51,7 @@ Meteorology:
 
 
 ```{r}
-rcomm1 <- rcommLM
+rcomm1 <- rcommQ
 ```
 
 
@@ -336,7 +336,7 @@ res4 <- get_lme(rcomm1, iqrs, eqn4, re = "~ 1| ID / id3")
 # ACF(res4$lme1, resType = "normalized", maxLag = 30) %>% plot()
 
 
-eqn5 <- "lPM ~ rtype + mph + srness" 
+eqn5 <- "lPM ~ rtype + mph + qsrness1hw" 
 res5 <- get_lme(rcomm1, iqrs, eqn5, re = "~ 1| ID / id3")
 # ACF(res4$lme1, resType = "normalized", maxLag = 30) %>% plot()
 ```
@@ -518,30 +518,6 @@ figs7
 ```
 
 
-## Speed
-
-```{r, eval = eval1, cache = T}
-rcommlag <- mutate(rcomm1, var = mph)
-eqn1 <- "lPM ~ var" 
-resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
-               intervals = T)
-SreslS <- resl
-
-rcomm0 <- rename(rcomm1, var = mph)
-eqn1 <- "lPM ~ var"
-res1 <- get_lme(rcomm0, iqrs, eqn1, re = "~ 1| ID / id3")
-resl[[12]] <- res1
-names(resl)[12] <- "main"
-
-```
-
-```{r}
-plot_nocat_sens(resl, "var")
-
-figs8 <- plot_nocat_senslag(SreslRN, "srness", SreslS, "mph")
-figs8
-```
-
 
 
 ## All
@@ -670,6 +646,7 @@ ggplot(mall, aes(x = term, y = estimate, colour = type)) + geom_pointrange(aes(y
 
 
 ```{r}
-save(fig5, fig6, figs7, figs8, file = here("results/lmfig.RData"))
+# figs8, 
+save(fig5, fig6, figs7, file = here("results/lmfig.RData"))
 save(resls, reslrn, reslrt, file = here("results/mainmod.RData"))
 ```

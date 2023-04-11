@@ -64,6 +64,8 @@ counties_use <- data.table( state_abbr = c( rep( 'DC', 1),
                                       'Jefferson'))
 # note: had to install USA boundaries from github
 counties.us <- USAboundaries::us_counties( )
+with(counties.us, table(state_name, state_name))
+counties.us <- counties.us[, -13]
 counties_use.sf <- merge( counties_use, counties.us) %>%
   st_as_sf( sf_column_name = 'geometry') %>%
   st_transform( crs = st_crs( p4s))
@@ -111,7 +113,7 @@ ggsave( here('plots/figure1_DMV.png'),
         width = 5, heigh = 5, units = 'in')
 
 
-
+save(counties_use.sf, states.us.sf, file = here("data/plot-dat.RData"))
 
 
 

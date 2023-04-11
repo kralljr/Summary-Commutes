@@ -62,6 +62,7 @@ dat500b <- rasterFromXYZ( dat500, crs = p4s)
 
 # just grab leng.distm2, which is what I used in the paper for roadiness
 gridPolygon <- rasterToPolygons( dat500b)
+gridPolygon500 <- gridPolygon
 gridPolygon@data$grid_cell500 <- 1:nrow(gridPolygon)
 
 
@@ -104,6 +105,7 @@ dat1kmb <- rasterFromXYZ( dat1km, crs = p4s)
 
 # just grab leng.distm2, which is what I used in the paper for roadiness
 gridPolygon <- rasterToPolygons( dat1kmb)
+gridPolygon1 <- gridPolygon
 gridPolygon@data$grid_cell <- 1:nrow(gridPolygon)
 
 
@@ -171,5 +173,6 @@ all.equal(points_gridcell1km$Latitude, points_gridcell500$Latitude)
 points_gridcell500 <- dplyr::select(points_gridcell500, -1, -2)
 points_gridcell <- cbind(points_gridcell1km, points_gridcell500)
 
+save(gridPolygon500, gridPolygon1, file = here("data/gridpolygon.RData"))
 
 save(points_gridcell, file = here("data/points_gricell-new.RData"))

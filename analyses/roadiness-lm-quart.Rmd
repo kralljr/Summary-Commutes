@@ -1,0 +1,390 @@
+---
+title: 'Regression sensivity: quartiles'
+author: "Jenna Krall"
+date: "10/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(knitr)
+library(splines)
+library(here)
+library(lme4)
+library(broom.mixed)
+library(ggthemes)
+library(nlme)
+library(forcats)
+library(gtools)
+library(patchwork)
+library(RColorBrewer)
+# library(lmeInfo)
+
+source(here("functions/model-funs.R"))
+
+source(here("functions/model-funs-quart.R"))
+load(here("data/rcomm2.RData"))
+load(here("data/iqrs.RData"))
+
+```
+
+
+
+# Plots
+
+
+```{r}
+rcomm1 <- rcommLM
+ggplot(rcomm1, aes(x = mph, y = lPM)) + geom_point() + geom_smooth()
+ggplot(rcomm1, aes(x = srness1loc, y = lPM)) + geom_point() + geom_smooth()
+ggplot(rcomm1, aes(x = srness500loc, y = lPM)) + geom_point() + geom_smooth()
+ggplot(rcomm1, aes(x = srness1hw, y = lPM)) + geom_point() + geom_smooth()
+ggplot(rcomm1, aes(x = srness500hw, y = lPM)) + geom_point() + geom_smooth()
+
+```
+
+
+# Data
+
+```{r, eval = T}
+
+# get quantiles
+quanttab0 <- dplyr::select(rcommLM, ID, id3, timemin, mph, srness1loc, srness500loc,
+                       srness1hw, srness500hw) %>%
+  pivot_longer(-c(ID, id3, timemin)) 
+
+quanttab <- quanttab0 %>%
+  group_by(name) %>%
+  summarize(Min = min(value), P25 = quantile(value, probs = 0.25),
+            P50 = quantile(value, probs = 0.5), 
+            P75 = quantile(value, probs = 0.75),
+            Max = max(value))
+
+
+# check nonlinearity
+quants <- full_join(quanttab0, quanttab) %>%
+  mutate(quantiles = case_when(value <= P25 ~ "Q1",
+                               value > P25 & value <= P50 ~ "Q2",
+                               value > P50 & value <= P75 ~ "Q3",
+                               value > P75 ~ "Q4")) %>%
+  dplyr::select(ID, id3, timemin, name, quantiles) %>%
+  mutate(name = paste0("q", name)) %>%
+  pivot_wider(values_from = "quantiles")
+rcommQ <- full_join(rcommLM, quants) 
+save(rcommQ, file = here("data/rcommQ.RData"))
+
+
+
+quanttab <- rename(quanttab, Variable = name) %>%
+  mutate(Variable = factor(Variable, levels = c("mph",
+                                                "srness1hw",
+                                                "srness1loc",
+                                                "srness500hw",
+                                                "srness500loc"),
+                           labels = c("Speed",
+                                      "Road density, Highway/1km",
+                                      "Road density, Local/1km",
+                                      "Road density, Highway/500m",
+                                      "Road density, Local/500m")))  %>%
+  mutate(Units = c("MPH", "SD", "SD", "SD", "SD")) %>%
+  select(Variable, Units, everything()) 
+```
+
+# Speed
+
+```{r}
+lme1 <- lmequart(rcommQ, "qmph", "qsrness1hw")
+qmph <- plot_cat_sensQ(lme1, "qmph")
+qmph$fig
+```
+
+
+
+
+
+# Roadiness
+
+
+## 1km res
+
+```{r}
+lme1 <- lmequart(rcommQ, "qsrness1loc", "qmph")
+p1 <- plot_cat_sensQ(lme1, "qsrness1loc")
+
+
+lme1 <- lmequart(rcommQ, "qsrness1hw", "qmph")
+p2 <- plot_cat_sensQ(lme1, "qsrness1hw")
+
+p1tab <- p1$tab %>% mutate(type = "Local")
+p2tab <- p2$tab %>% mutate(type = "Highway")
+
+pall <- full_join(p1tab, p2tab)
+q1tab <- pall
+q1km <- plot2(pall)
+q1km
+
+```
+
+
+
+## 500 m res
+
+```{r}
+lme1 <- lmequart(rcommQ, "qsrness500loc", "qmph")
+p1 <- plot_cat_sensQ(lme1, "qsrness500loc")
+
+
+lme1 <- lmequart(rcommQ, "qsrness500hw", "qmph")
+p2 <- plot_cat_sensQ(lme1, "qsrness500hw")
+
+p1tab <- p1$tab %>% mutate(type = "Local")
+p2tab <- p2$tab %>% mutate(type = "Highway")
+
+pall <- full_join(p1tab, p2tab)
+q500tab <- pall
+
+q500m <- plot2(pall)
+q500m
+
+```
+
+
+### Table of results
+
+```{r}
+q500tab1 <- dplyr::filter(q500tab, name == "Main") %>%
+  mutate(Resolution = "500 m")
+q1tab1 <- dplyr::filter(q1tab, name == "Main") %>%
+  mutate(Resolution = "1 km")
+qsrnesstab <- full_join(q500tab1, q1tab1) %>%
+  dplyr::select(term, estimate, conf.low, conf.high, type, Resolution) %>%
+  rename(Road = type) %>%
+  mutate(estimate = round(estimate, 2),
+         conf.low = round(conf.low, 2),
+         conf.high = round(conf.high, 2),
+         estCI = paste0(estimate, " (", conf.low, ", ", conf.high, ")")) %>%
+  dplyr::select(term, estCI, Road, Resolution) %>%
+  pivot_wider(names_from = "term", values_from = "estCI") 
+
+qsrnesstab
+```
+
+## Adjust for other roadiness (local or highway)
+
+```{r}
+lme1 <- lmequart(rcommQ, "qsrness1loc", "qsrness1hw")
+p1 <- plot_cat_sensQ(lme1, "qsrness1loc")
+p1$fig
+
+lme1 <- lmequart(rcommQ, "qsrness1hw", "qsrness1loc")
+p2 <- plot_cat_sensQ(lme1, "qsrness1hw")
+p2$fig
+
+
+lme1 <- lmequart(rcommQ, "qsrness500loc", "qsrness500hw")
+p1 <- plot_cat_sensQ(lme1, "qsrness500loc")
+p1$fig
+
+lme1 <- lmequart(rcommQ, "qsrness500hw", "qsrness500loc")
+p2 <- plot_cat_sensQ(lme1, "qsrness500hw")
+p2$fig
+
+```
+
+# Lags
+
+
+## Roadiness
+
+### 1 km
+
+*Local*
+
+
+```{r}
+eval1 <- T
+```
+
+```{r, eval = eval1, cache = T}
+rcommlag <- mutate(rcommQ, var = qsrness1loc)
+eqn1 <- "lPM ~ var" 
+resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
+               intervals = T)
+SreslS0 <- resl
+
+
+```
+
+```{r}
+roadlag1loc <- plot_nocat_senslagQ(SreslS0, "qsrness1loc")
+roadlag1loc
+```
+
+*Highway*
+
+```{r, eval = eval1, cache = T}
+rcommlag <- mutate(rcommQ, var = qsrness1hw)
+eqn1 <- "lPM ~ var" 
+resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
+               intervals = T)
+SreslS <- resl
+
+
+```
+
+```{r}
+roadlag1hw <- plot_nocat_senslagQ(SreslS, "Highway", SreslS0, "Local")
+roadlag1hw
+```
+
+
+
+### 500 km
+
+*Local*
+
+```{r, eval = eval1, cache = T}
+rcommlag <- mutate(rcommQ, var = qsrness500loc)
+eqn1 <- "lPM ~ var" 
+resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
+               intervals = T)
+SreslS0 <- resl
+
+
+```
+
+```{r}
+roadlag500loc <- plot_nocat_senslagQ(SreslS0, "qsrness500loc")
+roadlag500loc
+```
+
+*Highway*
+
+```{r, eval = eval1, cache = T}
+rcommlag <- mutate(rcommQ, var = qsrness500hw)
+eqn1 <- "lPM ~ var" 
+resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
+               intervals = T)
+SreslS <- resl
+
+
+```
+
+```{r}
+roadlag500hw <- plot_nocat_senslagQ(SreslS, "Highway", SreslS0, "Local")
+roadlag500hw
+```
+
+
+
+## Roadiness adjust for local/highway
+
+### 1 km
+
+*Local*
+
+
+```{r}
+eval1 <- T
+```
+
+```{r, eval = eval1, cache = T}
+rcommlag <- mutate(rcommQ, var = qsrness1loc)
+eqn1 <- "lPM ~ var + qsrness1hw" 
+resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
+               intervals = T, covar =  c("ID", "id3", "var" ,"lPM", "qsrness1hw"))
+SreslS <- resl
+
+
+```
+
+```{r}
+ plot_nocat_senslagQ(SreslS, "qsrness1loc")
+
+```
+
+*Highway*
+
+```{r, eval = eval1, cache = T}
+rcommlag <- mutate(rcommQ, var = qsrness1hw)
+eqn1 <- "lPM ~ var + qsrness1loc" 
+resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
+               intervals = T, covar =  c("ID", "id3", "var" ,"lPM", "qsrness1loc"))
+SreslS <- resl
+
+
+```
+
+```{r}
+plot_nocat_senslagQ(SreslS, "qsrness1hw")
+
+```
+
+
+
+### 500 km
+
+*Local*
+
+```{r, eval = eval1, cache = T}
+rcommlag <- mutate(rcommQ, var = qsrness500loc)
+eqn1 <- "lPM ~ var + qsrness500hw" 
+resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
+               intervals = T, covar =  c("ID", "id3", "var" ,"lPM", "qsrness500hw"))
+SreslS <- resl
+
+
+```
+
+```{r}
+plot_nocat_senslagQ(SreslS, "qsrness500loc")
+
+```
+
+*Highway*
+
+```{r, eval = eval1, cache = T}
+rcommlag <- mutate(rcommQ, var = qsrness500hw)
+eqn1 <- "lPM ~ var + qsrness500loc" 
+resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
+               intervals = T, covar =  c("ID", "id3", "var" ,"lPM", "qsrness500loc"))
+SreslS <- resl
+
+
+```
+
+```{r}
+plot_nocat_senslagQ(SreslS, "qsrness500hw")
+
+```
+
+
+## Speed
+
+```{r, eval = eval1, cache = T}
+rcommlag <- mutate(rcommQ, var = qmph)
+eqn1 <- "lPM ~ var" 
+resl <- runlag(rcommlag, iqrs, eqn1,re = "~ 1| ID / id3", lags = seq(0, 10), corr  = T,
+               intervals = T)
+SreslS <- resl
+
+
+```
+
+```{r}
+mphlag <- plot_nocat_senslagQ(SreslS, "qmph")
+mphlag
+```
+
+
+# Save
+```{r}
+save(quanttab, qmph, q1km, q500m, mphlag, roadlag1hw, roadlag1loc, roadlag500hw, roadlag500loc, qsrnesstab,
+     file = here("results/sens-er.RData"))
+
+```

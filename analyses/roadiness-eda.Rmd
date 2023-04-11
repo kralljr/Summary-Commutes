@@ -306,16 +306,21 @@ dplyr::select(rcomm, ID, date_local, group, rtypeMode) %>% unique() %>%
 Reporting values is not so useful (standardized)
 ```{r}
 
-s1 <- summarize(rcomm, mean = mean(srness), sd = sd(srness), min = min(srness), max= max(srness))
+s11 <- rcomm %>% 
+  dplyr::select(ID, id2, srness1loc, srness500loc, srness1hw, srness500hw) %>%
+  pivot_longer(-c(ID, id2)) 
 
-s1 %>%
+s11 %>%
+  group_by(name) %>%
+  summarize(mean = mean(value), sd = sd(value), min = min(value), max= max(value)) %>%
   kable(digits = 2)
-ggplot(rcomm, aes(x = srness)) + geom_histogram(bins = 20)
+ggplot(s11, aes(x = value)) + geom_histogram(bins = 20) +
+  facet_wrap(~name)
 
 
 
 # by ID
-g1 <- group_by(rcomm, ID) %>% summarize(mean = mean(srness), sd = sd(srness), min = min(srness), max = max(srness))  %>% ungroup()
+g1 <- s11 %>% group_by(name, ID) %>% summarize(mean = mean(value), sd = sd(value), min = min(value), max = max(value))  %>% ungroup()
 g1 %>% kable(digits = 2)
 
 ```

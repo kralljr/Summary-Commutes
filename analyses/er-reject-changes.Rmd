@@ -49,9 +49,11 @@ source(here("functions/model-funs.R"))
 ```{r}
 library(corrplot)
 
-corr1 <- dplyr::select(rcommLM, srness, mph, daily, obsdiff, awnd,
+corr1 <- dplyr::select(rcommLM, srness1hw, srness1loc, 
+                       srness500hw, srness500loc, mph, daily, obsdiff, awnd,
                        tmax, tmin, tavg, RH) %>%
-  rename(Roadiness = srness, Speed = mph, DailyPM = daily, HourlyDevPM = obsdiff, WindSpeed = awnd, MaxTemp = tmax, MinTemp = tmin, MeanTemp = tavg, Humid = RH) %>%
+  rename(RD1Hw = srness1hw, RD1Loc = srness1loc, RD500Hw = srness500hw, RD500Loc = srness500loc, 
+         Speed = mph, DailyPM = daily, HourlyDevPM = obsdiff, WindSpeed = awnd, MaxTemp = tmax, MinTemp = tmin, MeanTemp = tavg, Humid = RH) %>%
   cor()
 corrplot(corr1)
 

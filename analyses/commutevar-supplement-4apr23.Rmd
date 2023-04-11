@@ -1,0 +1,448 @@
+---
+title: 'Short-term associations of road density and road features with in-vehicle PM2.5 during daily trips'
+subtitle: "Supplementary Material"
+output: 
+  pdf_document:
+    toc: true
+    keep_tex: true
+    includes:
+      in_header: header.tex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(knitr)
+library(here)
+library(viridis)
+library(ggthemes)
+library(DescTools)
+library(RColorBrewer)
+library(forcats)
+library(lubridate)
+library(patchwork)
+
+source(here("rcode/windrose.R"))
+
+# from roadiness-eda.Rmd
+load(here("figures/eda-tabfig.RData"))
+# from figure2.R
+load(here("figures/fighourly.RData"))
+
+# supplement from roadiness-eda.Rmd
+load(here("results/supp-plots.RData"))
+
+
+# gps plot data
+load(here("results/gpsplotdata.RData"))
+
+# masstime
+load(here("results/masstime.RData"))
+
+# lag figs
+load(here("results/lmfig.RData"))
+
+
+# icc
+load(here("results/icc.RData"))
+
+
+# reject ER changes
+load(here("results/er-reject-res.RData"))
+
+
+# quantiles
+load( here("results/sens-er.RData"))
+
+
+# maps
+load(here("data/maps.RData"))
+```
+
+# Tables
+
+```{r}
+k <- 1
+```
+
+## Table S`r k`. Demographic characteristics (N (%)) for N=25 participants.
+
+```{r}
+k <- k + 1
+```
+
+
+```{r}
+kable(demo)
+```
+
+
+
+
+## Table S`r k`. Meteorological characteristics (N (%)) for N=45 person-days of observation.
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+kable(catweath)
+```
+
+\blandscape
+
+## Table S`r k`. Correlations between numeric variables including road features (Road density and speed (MPH)), ambient PM$_{2.5}$ (DailyPM, daily ambient PM$_{2.5}$ and HourlyDevPM, hourly deviations from daily ambient PM$_{2.5}$), and daily meteorology (WindSpeed (m/s), MaxTemp, maximum temperature ($^{\circ}$C), MinTemp, minimum temperature ($^{\circ}$C), and Humid, relative humidity (%)).
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+corr1b
+```
+
+## Table S`r k`. Minimum, maximum, and quantiles (P25 = 25%ile, P50 = 50%ile, P75 = 75%ile) for speed and road density, for both local roads and highways at both 500 m and 1 km resolution.
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+kable(quanttab, digits = 2)
+```
+
+\elandscape
+
+# Figures
+
+```{r}
+k <- 1
+```
+
+
+## Figure S`r k`. Map of standardized road density in northern Virginia for highways and local roads at 500 m resolution.
+
+```{r}
+k <- k + 1
+```
+
+
+```{r}
+hw500 + loc500
+
+```
+
+## Figure S`r k`. Distributions of in-vehicle PM$_{2.5}$ exposures ($\mu$g/m$^3$) for each participant (N=25) on the natural log scale, along with observation time in minutes.  Participants are ordered by their median personal PM$_{2.5}$ exposures across trips.
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+rcomm1 <- boxplot1[[2]]
+ns <- boxplot1[[3]]
+
+dates <- dplyr::select(rcomm1, date) %>% unique() %>% 
+  rename(date_local = date)
+rcomm2 <- rcomm1 %>%
+  mutate(PM = PM + 0.01)
+figs1 <- ggplot(rcomm2, aes(y = fct_reorder(ID, medl), x  = PM)) + geom_boxplot() +#outlier.shape = NA
+   ylab(expression(paste("Minutes observed per participant"))) +
+  xlab((expression(paste("PM"[2.5], " (", mu, "g/m"^3, ")")))) +
+  scale_x_continuous(trans = "log", breaks = c(0.08, 0.5, 3, 20)) +
+  theme_bw() +
+  scale_y_discrete(breaks = ns$ID, labels = ns$n) +
+  theme(text = element_text(size = 12))
+figs1 
+
+```
+
+
+
+## Figure S`r k`. Percentage of observations on each road type per participant (N=25).
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+perc <- roadtype1[[2]]
+perc <- mutate(perc, rtype = factor(rtype, levels = c("High/SecHigh", "Other", "LocalConn", "Local"),
+                                    labels = c("Highway", "Ramp/Tunnel",
+                                               "LocalConn", "Local"))) 
+
+roadtypep <- ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) + 
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "red", name = "Percent") +
+  xlab("") + ylab("Participant") +
+  theme(text = element_text(size=12), axis.text.y = element_blank())
+
+roadtypep
+
+```
+
+## Figure S`r k`. Variation in PM$_{2.5}$ (in standard deviations (SD) from trip-specific means) over each observed trip (N=69).  
+
+```{r}
+k <- k + 1
+```
+
+
+
+```{r, fig.width = 3.5}
+rcomm1 <- tripplot[[2]]
+pmtile <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = lPM2)) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
+  # scale_fill_gradient2(name = "Change in PM2.5 (SD)", low = "green", high = "red",
+                       # mid = "white") +
+  scale_fill_gradient2(name = "Change in PM2.5 (SD)", low = "#dedc59", high = "#5c3a85", mid = "white") +
+
+  #theme_bw() +
+  theme(text = element_text(size=12), axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(), legend.position = c(.75, .25))
+
+pmtile
+
+
+```
+
+## Figure S`r k`. Variation in road type (highway, ramp/tunnel, local connecting, and local roads) and speed (mph) over each observed trip (N=69).
+
+```{r}
+k <- k + 1
+```
+
+
+```{r}
+rcomm1 <- tripplot[[2]]
+```
+
+```{r}
+roadtype2 <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = rtype2)) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
+  scale_fill_colorblind(name = "Road type") +
+ # theme_bw() +
+  theme(text = element_text(size=12), axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position  = c(.75, .25))
+
+speed <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = (mph))) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
+  scale_fill_viridis(begin = 1, end = 0, name = "Speed (mph)") +#(name = "Speed (mph)", high = "#132B43", low = "#56B1F7") +
+  #theme_bw() +
+  theme(text = element_text(size=12), axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(), legend.position = c(.75, .25))
+
+tripplot1 <- roadtype2 + speed
+tripplot1[[2]] = tripplot1[[2]] + theme(axis.text.y = element_blank(),
+                                        axis.ticks.y = element_blank(),
+                                        axis.title.y = element_blank() )
+
+tripplot1
+
+```
+
+
+## Figure S`r k`. Variation in road density for highways and local roads at 500 m resolution (in standard deviations (SD)) and over each observed trip (N=69).  
+
+```{r}
+k <- k + 1
+```
+
+
+```{r}
+rcomm1 <- tripplot[[2]]
+```
+
+```{r}
+srness1 <- dplyr::select(rcomm1, ID, id2, timemin, contains("srness")) %>%
+  pivot_longer(-c(ID, id2, timemin)) %>%
+  dplyr::filter(name %in% c("srness500loc", "srness500hw")) %>%
+  mutate(name = case_when(name == "srness500loc" ~ "Local",
+                       
+                          name == "srness500hw" ~ "Highway")) 
+
+
+
+srness <- ggplot(srness1, aes(x = timemin, y = id2, fill = value)) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
+ scale_fill_gradient2(name = "Road density", low = "#dedc59", high = "#5c3a85", mid = "white") +
+  facet_wrap(~name) +
+  theme(text = element_text(size=12), axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position  = c(.9, .3))  + theme(axis.text.y = element_blank(),
+                                        axis.ticks.y = element_blank(),
+                                        axis.title.y = element_blank() )
+
+srness
+
+```
+
+## Figure S`r k`. Distributions of daily ambient PM$_{2.5}$ ($\mu$g/m$^3$) and hourly PM$_{2.5}$ ($\mu$g/m$^3$) for N=45 person-days of observation.
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+rcomm1 <- boxplot1[[2]]
+ns <- boxplot1[[3]]
+
+dates <- dplyr::select(rcomm1, date, ID) %>% unique() %>% rename(date_local = date)
+
+# get data
+va24 <- dailypm[[2]]
+va24 <- full_join(va24, dates)
+
+
+obsdiff0 <- fighourly[[2]]
+obsdiff <- left_join(dates, obsdiff0)
+alps <- fighourly[[3]] - 0.2
+cols <- fighourly[[4]]
+
+
+# add in median daily PM for hourly
+va241 <- dplyr::select(va24, daily) %>% 
+  mutate(type = "daily") 
+sva <- summarize(va241, med = median(daily))
+obsdiff1 <- dplyr::select(obsdiff, time_local, obsdiff) %>%
+  mutate(type = "hourly", obsdiff = obsdiff + sva$med,
+         type2 = paste0("Hour:", time_local)) %>%
+  rename(pm = obsdiff) %>% dplyr::select(-time_local)
+va241 <- dplyr::select(va24, daily) %>% 
+  mutate(type = "Daily", type2 = "Daily") %>%
+  rename(pm = daily)
+vals <- c("Daily", paste0("Hour:", seq(0, 23)))
+dhour <- bind_rows(obsdiff1, va241) %>%
+  mutate(type2 = factor(type2, levels = vals))
+```
+
+
+
+```{r}
+fighourly <- ggplot() +
+  geom_boxplot(data = dhour, aes(x = factor(type2), y = pm, colour = type)) +
+  geom_vline(xintercept = 1.5, colour = "grey20", linewidth = 1) +
+  ylab(expression(paste("PM"[2.5], " (", mu, "g/m"^3, ")"))) +#, #"\nrelative to daily average"))) +
+  xlab("") +
+  scale_color_manual(values =c(1, cols[1]), guide = "none") +
+  theme_bw() +
+  theme(text = element_text(size = 12),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+fighourly
+```
+
+
+
+
+
+
+## Figure S`r k`. Wind rose plot showing direction of the fastest wind (degrees) sustained over five minutes across N=45 person-days of observation.
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+plot.windrose(winddir1)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+## Figure S`r k`. Associations of road density at 500 meters with in-vehicle PM$_{2.5}$ concentrations from linear mixed models comparing each quartile of road density (Q2, Q3, Q4) to the lowest quartile. Results include main (unadjusted) models as well as models that separately adjusted for meteorology, ambient PM$_{2.5}$, rush hour trips, and all road features.
+
+```{r}
+k <- k + 1
+
+```
+
+
+```{r}
+q500m
+```
+
+
+## Figure S`r k`. Associations of road type with in-vehicle PM$_{2.5}$ concentrations from linear mixed models, reported as the change in log $\mu$g/m$^3$ (95% confidence intervals) comparing travelling on highways, local connecting roads, and ramps/tunnels to local roads.  Results include main (unadjusted) models as well as models adjusted for meteorology, ambient PM$_{2.5}$, and rush hour trips, and all road features.
+
+```{r}
+k <- k + 1
+```
+
+
+```{r}
+fig5
+
+```
+
+
+## Figure S`r k`. Associations of speed with in-vehicle PM$_{2.5}$ concentrations from linear mixed models comparing each quartile of speed (Q2, Q3, Q4) to the lowest quartile. Results include main (unadjusted) models as well as models that separately adjusted for meteorology, ambient PM$_{2.5}$, rush hour trips, and all road features.
+
+
+```{r}
+k <- k + 1
+
+```
+
+
+```{r}
+qmph$fig
+```
+
+
+
+## Figure S`r k`. Associations of of road density at 500 m with in-vehicle PM$_{2.5}$ concentrations from linear mixed models for main models (lag 0) and lags up to 10 minutes, comparing each quartile of road density (Q2, Q3, Q4) to the lowest quartile for highways and local roads.
+
+
+```{r}
+k <- k + 1
+```
+
+
+```{r}
+roadlag500hw
+```
+
+
+
+
+
+## Figure S`r k`. Associations of road type with in-vehicle PM$_{2.5}$ concentrations from linear mixed models for main models (lag 0) and lags up to 10 minutes, reported as the change in log $\mu$g/m$^3$ comparing travelling on highways, ramps/tunnels, and local connecting roads to local roads.  
+
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+figs7
+
+```
+
+
+
+## Figure S`r k`. Associations of speed with in-vehicle PM$_{2.5}$ concentrations from linear mixed models for main models (lag 0) and lags up to 10 minutes, comparing each quartile of speed (Q2, Q3, Q4) to the lowest quartile.
+
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+mphlag
+
+```
+
+

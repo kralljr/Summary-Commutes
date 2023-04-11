@@ -1,0 +1,164 @@
+---
+title: "Short-term associations of road density and road features with in-vehicle PM2.5 during
+  daily trips"
+subtitle: Main text figures
+output:
+  pdf_document:
+    toc: yes
+    keep_tex: true
+  html_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(knitr)
+library(here)
+library(ggthemes)
+library(DescTools)
+library(RColorBrewer)
+library(forcats)
+library(lubridate)
+library(patchwork)
+
+figloc <- "~/Dropbox/CommuteVar/figures"
+
+# from roadiness-eda.Rmd
+load(here("figures/eda-tabfig.RData"))
+# from figure2.R
+load(here("figures/fighourly.RData"))
+
+# paired analysis
+load(file.path(figloc, "figpaired.RData"))
+
+# masstime
+load(here("results/masstime.RData"))
+
+
+# lm res
+
+load(here("results/lmfig.RData"))
+
+
+# quantiles
+load( here("results/sens-er.RData"))
+
+# maps
+load(here("data/maps.RData"))
+```
+
+
+
+
+# Tables
+
+```{r}
+k <- 1
+
+```
+
+
+
+
+## Table `r k`. Unadjusted differences in in-vehicle PM$_{2.5}$ (in log $\mu$g/m$^3$) comparing each quartile of road density (Q2, Q3, Q4) to the lowest quartile for both highways and local roads at 500 m and 1 km from linear mixed models 
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+kable(qsrnesstab)
+
+```
+
+
+# Figures
+```{r}
+k <- 1
+
+```
+
+
+## Figure `r k`. Map of standardized road density in northern Virginia for highways and local roads at 1 km resolution.
+
+```{r}
+k <- k + 1
+```
+
+
+```{r}
+hw1 + loc1
+
+```
+
+## Figure `r k`. Variation in road density for highways and local roads at 1 km resolution (in standard deviations (SD)) and over each observed trip (N=69).  
+
+```{r}
+k <- k + 1
+```
+
+
+```{r}
+rcomm1 <- tripplot[[2]]
+```
+
+```{r}
+srness1 <- dplyr::select(rcomm1, ID, id2, timemin, contains("srness")) %>%
+  pivot_longer(-c(ID, id2, timemin)) %>%
+  dplyr::filter(name %in% c("srness1loc", "srness1hw")) %>%
+  mutate(name = case_when(name == "srness1loc" ~ "Local",
+                          name == "srness1hw" ~ "Highway")) 
+
+
+
+srness <- ggplot(srness1, aes(x = timemin, y = id2, fill = value)) +
+  geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
+ scale_fill_gradient2(name = "Road density", low = "#dedc59", high = "#5c3a85", mid = "white") +
+  facet_wrap(~name) +
+  theme(text = element_text(size=12), axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position  = c(.9, .3))  + theme(axis.text.y = element_blank(),
+                                        axis.ticks.y = element_blank(),
+                                        axis.title.y = element_blank() )
+
+srness
+ggsave(file = here("figures/fig2-v2.png"), width = 5.5, height = 3.5)
+
+```
+
+
+
+
+
+
+## Figure `r k`. Associations of road density at 1 km with in-vehicle PM$_{2.5}$ concentrations from linear mixed models comparing each quartile of road density (Q2, Q3, Q4) to the lowest quartile for highways and local roads. Results include main (unadjusted) models as well as models that separately adjusted for meteorology, ambient PM$_{2.5}$, rush hour trips, and all road features.
+
+```{r}
+k <- k + 1
+
+```
+
+
+```{r}
+q1km
+```
+
+
+## Figure `r k`. Associations of of road density at 1 km with in-vehicle PM$_{2.5}$ concentrations from linear mixed models for main models (lag 0) and lags up to 10 minutes, comparing each quartile of road density (Q2, Q3, Q4) to the lowest quartile for highways and local roads.
+
+
+```{r}
+k <- k + 1
+```
+
+
+```{r}
+roadlag1hw
+```
+
+
