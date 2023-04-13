@@ -95,24 +95,28 @@ kable(catweath)
 
 \blandscape
 
-## Table S`r k`. Correlations between numeric variables including road features (Road density and speed (MPH)), ambient PM$_{2.5}$ (DailyPM, daily ambient PM$_{2.5}$ and HourlyDevPM, hourly deviations from daily ambient PM$_{2.5}$), and daily meteorology (WindSpeed (m/s), MaxTemp, maximum temperature ($^{\circ}$C), MinTemp, minimum temperature ($^{\circ}$C), and Humid, relative humidity (%)).
+## Table S`r k`. Correlations of road features with ambient PM$_{2.5}$ and daily meteorology. Variables include: Road density: road density for highways and local roads at both 1 km and 500 m  (standard deviations); Speed (MPH); DailyPM: daily ambient PM$_{2.5}$ ($\mu$g/m$^3$);  HourlyDevPM: hourly deviations from daily ambient PM$_{2.5}$ ($\mu$g/m$^3$); WindSpeed (m/s); MaxTemp: maximum temperature ($^{\circ}$C); MinTemp: minimum temperature ($^{\circ}$C); and Humid: relative humidity (%)).
 
 ```{r}
 k <- k + 1
 ```
 
 ```{r}
-corr1b
+options(knitr.kable.NA = '')
+corr1c <- corr1b[, -c(1 : 4)]
+rownames(corr1c)[1 : 4] <- paste0("Road density, ", rep(c("Highway", "Local"), 2), "/",
+                                  c(rep(c("1km", "500m"), each = 2)) )
+kable(corr1c, digits = 2)
 ```
 
-## Table S`r k`. Minimum, maximum, and quantiles (P25 = 25%ile, P50 = 50%ile, P75 = 75%ile) for speed and road density, for both local roads and highways at both 500 m and 1 km resolution.
+## Table S`r k`. Minimum, maximum, and quantiles (P25 = 25%ile, P50 = 50%ile, P75 = 75%ile) for road density (for highways and local roads at both 1 km and 500 m) and speed.
 
 ```{r}
 k <- k + 1
 ```
 
 ```{r}
-kable(quanttab, digits = 2)
+kable(quanttab[c(2 : 5, 1),], digits = 2)
 ```
 
 \elandscape
@@ -132,7 +136,8 @@ k <- k + 1
 
 
 ```{r}
-hw500 + loc500
+hw500 + ggtitle("A. Highway") +
+  loc500 + title("B. Local")
 
 ```
 
@@ -281,6 +286,9 @@ srness <- ggplot(srness1, aes(x = timemin, y = id2, fill = value)) +
 srness
 
 ```
+
+
+
 
 ## Figure S`r k`. Distributions of daily ambient PM$_{2.5}$ ($\mu$g/m$^3$) and hourly PM$_{2.5}$ ($\mu$g/m$^3$) for N=45 person-days of observation.
 

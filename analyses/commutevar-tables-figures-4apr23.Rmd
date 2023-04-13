@@ -45,6 +45,9 @@ load(here("results/masstime.RData"))
 load(here("results/lmfig.RData"))
 
 
+# reject ER changes
+load(here("results/er-reject-res.RData"))
+
 # quantiles
 load( here("results/sens-er.RData"))
 
@@ -64,6 +67,19 @@ k <- 1
 
 
 
+## Table `r k`. Correlations between road features including standardized road density (at 1 km and 500 m resolution for highways and local roads) and speed (MPH).
+
+```{r}
+k <- k + 1
+```
+
+```{r}
+options(knitr.kable.NA = '')
+corr1c <- corr1b[c(1 : 4), c(1 : 4)]
+rownames(corr1c)[1 : 4] <- paste0("Road density, ", rep(c("Highway", "Local"), 2), "/",
+                                  c(rep(c("1km", "500m"), each = 2)) )
+kable(corr1c, digits = 2)
+```
 
 ## Table `r k`. Unadjusted differences in in-vehicle PM$_{2.5}$ (in log $\mu$g/m$^3$) comparing each quartile of road density (Q2, Q3, Q4) to the lowest quartile for both highways and local roads at 500 m and 1 km from linear mixed models 
 
@@ -133,7 +149,16 @@ ggsave(file = here("figures/fig2-v2.png"), width = 5.5, height = 3.5)
 
 
 
+## Figure `r k`. Proportion of road type by quartiles of road density (at 1 km and 500 m resolution for highways and local roads).
 
+```{r}
+k <- k + 1
+```
+
+
+```{r}
+rtypecorr
+```
 
 
 ## Figure `r k`. Associations of road density at 1 km with in-vehicle PM$_{2.5}$ concentrations from linear mixed models comparing each quartile of road density (Q2, Q3, Q4) to the lowest quartile for highways and local roads. Results include main (unadjusted) models as well as models that separately adjusted for meteorology, ambient PM$_{2.5}$, rush hour trips, and all road features.

@@ -73,12 +73,35 @@ corr1b[which(corr1b == 0)] <- NA
 corr1b <- corr1b %>%
   data.frame() %>%
   slice(-nrow(corr1b)) %>%
-  dplyr::select(-1) %>%
-  kable(digits = 2)
+  dplyr::select(-1)
 corr1b
 
 ```
 
+
+## With road type
+
+```{r}
+load(here("data/rcommQ.RData"))
+
+corr1 <- dplyr::select(rcommQ, contains("q"), rtype, ID, id3) %>%
+  dplyr::select(-qmph) %>%
+  pivot_longer(contains("q")) %>%
+  mutate(name = substring(name, 8), res = ifelse(substr(name, 1, 1) == "1", "1km", "500m"),
+         type = ifelse((substr(name, 4, 4) == "h" | substr(name, 2, 2) == "h"), "Highway", "Local")) %>%
+  group_by(rtype, name, value, res, type) %>%
+  count() %>%
+  mutate(rtype = factor(rtype, levels = c("High/SecHigh", "LocalConn", "Local", "Other")))
+
+rtypecorr <- ggplot(corr1, aes(fill=rtype, y=n, x=value)) + 
+    geom_bar(position="fill", stat="identity") +
+  xlab("Quartile of road density") +
+  ylab("Proportion") +
+  scale_fill_colorblind(name = "Road type") +
+  facet_wrap(type ~ res) +
+  theme(text = element_text(size = 12))
+
+```
 
 ## Daily level only (no difference)
 
@@ -123,5 +146,5 @@ ggplot(rcommLM2, aes(x = factor(dow), y = lPM)) + geom_boxplot()
 
 ```{r}
 
-save(corr1b, file = here("results/er-reject-res.RData"))
+save(corr1b,rtypecorr,  file = here("results/er-reject-res.RData"))
 ```
