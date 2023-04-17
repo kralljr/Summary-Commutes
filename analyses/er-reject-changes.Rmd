@@ -87,20 +87,31 @@ load(here("data/rcommQ.RData"))
 corr1 <- dplyr::select(rcommQ, contains("q"), rtype, ID, id3) %>%
   dplyr::select(-qmph) %>%
   pivot_longer(contains("q")) %>%
-  mutate(name = substring(name, 8), res = ifelse(substr(name, 1, 1) == "1", "1km", "500m"),
+  mutate(name = substring(name, 8), res = ifelse(substr(name, 1, 1) == "1", "1 km", "500 m"),
          type = ifelse((substr(name, 4, 4) == "h" | substr(name, 2, 2) == "h"), "Highway", "Local")) %>%
   group_by(rtype, name, value, res, type) %>%
   count() %>%
-  mutate(rtype = factor(rtype, levels = c("High/SecHigh", "LocalConn", "Local", "Other")))
+  mutate(rtype = factor(rtype, levels = c("High/SecHigh", "Other","LocalConn", "Local"), labels = c("Highway", "Ramp/Tunnel", "LocalConn", "Local")),
+         typeres = paste0("Road density: ", type, ", ", res))
 
 rtypecorr <- ggplot(corr1, aes(fill=rtype, y=n, x=value)) + 
     geom_bar(position="fill", stat="identity") +
   xlab("Quartile of road density") +
   ylab("Proportion") +
   scale_fill_colorblind(name = "Road type") +
-  facet_wrap(type ~ res) +
+  facet_wrap( ~ typeres) +
   theme(text = element_text(size = 12))
+rtypecorr
 
+
+cor12 <- ungroup(corr1) %>%
+  group_by(typeres, value) %>%
+  mutate(sum1 = sum(n), prop = n / sum1)
+dplyr::filter(cor12, typeres == "Road density: Highway, 1 km") %>%
+  arrange(value, rtype)
+
+dplyr::filter(cor12, typeres == "Road density: Local, 1 km") %>%
+  arrange(value, rtype)
 ```
 
 ## Daily level only (no difference)

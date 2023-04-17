@@ -87,10 +87,10 @@ quanttab <- rename(quanttab, Variable = name) %>%
                                                 "srness500hw",
                                                 "srness500loc"),
                            labels = c("Speed",
-                                      "Road density, Highway/1km",
-                                      "Road density, Local/1km",
-                                      "Road density, Highway/500m",
-                                      "Road density, Local/500m")))  %>%
+                                      "Road density: Highway, 1 km",
+                                      "Road density: Local, 1 km",
+                                      "Road density: Highway, 500 m",
+                                      "Road density: Local, 500 m")))  %>%
   mutate(Units = c("MPH", "SD", "SD", "SD", "SD")) %>%
   select(Variable, Units, everything()) 
 ```
@@ -120,8 +120,8 @@ p1 <- plot_cat_sensQ(lme1, "qsrness1loc")
 lme1 <- lmequart(rcommQ, "qsrness1hw", "qmph")
 p2 <- plot_cat_sensQ(lme1, "qsrness1hw")
 
-p1tab <- p1$tab %>% mutate(type = "Local")
-p2tab <- p2$tab %>% mutate(type = "Highway")
+p1tab <- p1$tab %>% mutate(type = "Road density: Local")
+p2tab <- p2$tab %>% mutate(type = "Road density: Highway")
 
 pall <- full_join(p1tab, p2tab)
 q1tab <- pall
@@ -142,8 +142,8 @@ p1 <- plot_cat_sensQ(lme1, "qsrness500loc")
 lme1 <- lmequart(rcommQ, "qsrness500hw", "qmph")
 p2 <- plot_cat_sensQ(lme1, "qsrness500hw")
 
-p1tab <- p1$tab %>% mutate(type = "Local")
-p2tab <- p2$tab %>% mutate(type = "Highway")
+p1tab <- p1$tab %>% mutate(type = "Road density: Local")
+p2tab <- p2$tab %>% mutate(type = "Road density: Highway")
 
 pall <- full_join(p1tab, p2tab)
 q500tab <- pall
@@ -238,7 +238,7 @@ SreslS <- resl
 ```
 
 ```{r}
-roadlag1hw <- plot_nocat_senslagQ(SreslS, "Highway", SreslS0, "Local")
+roadlag1hw <- plot_nocat_senslagQ(SreslS, "Road density: Highway", SreslS0, "Road density: Local")
 roadlag1hw
 ```
 
@@ -276,7 +276,7 @@ SreslS <- resl
 ```
 
 ```{r}
-roadlag500hw <- plot_nocat_senslagQ(SreslS, "Highway", SreslS0, "Local")
+roadlag500hw <- plot_nocat_senslagQ(SreslS, "Road density: Highway", SreslS0, "Road density: Local")
 roadlag500hw
 ```
 

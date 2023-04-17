@@ -58,7 +58,10 @@ load(here("results/er-reject-res.RData"))
 # quantiles
 load( here("results/sens-er.RData"))
 
+```
 
+
+```{r, cache = T}
 # maps
 load(here("data/maps.RData"))
 ```
@@ -95,7 +98,7 @@ kable(catweath)
 
 \blandscape
 
-## Table S`r k`. Correlations of road features with ambient PM$_{2.5}$ and daily meteorology. Variables include: Road density: road density for highways and local roads at both 1 km and 500 m  (standard deviations); Speed (MPH); DailyPM: daily ambient PM$_{2.5}$ ($\mu$g/m$^3$);  HourlyDevPM: hourly deviations from daily ambient PM$_{2.5}$ ($\mu$g/m$^3$); WindSpeed (m/s); MaxTemp: maximum temperature ($^{\circ}$C); MinTemp: minimum temperature ($^{\circ}$C); and Humid: relative humidity (%)).
+## Table S`r k`. Correlations of road features with ambient PM$_{2.5}$ and daily meteorology. Variables include: Road density: road density for highways and local roads at 1 km and 500 m resolution (standard deviations); Speed (MPH); DailyPM: daily ambient PM$_{2.5}$ ($\mu$g/m$^3$);  HourlyDevPM: hourly deviations from daily ambient PM$_{2.5}$ ($\mu$g/m$^3$); WindSpeed (m/s); MaxTemp: maximum temperature ($^{\circ}$C); MinTemp: minimum temperature ($^{\circ}$C); MeanTemp: mean temperature ($^{\circ}$C); and Humid: relative humidity (%)).
 
 ```{r}
 k <- k + 1
@@ -104,19 +107,35 @@ k <- k + 1
 ```{r}
 options(knitr.kable.NA = '')
 corr1c <- corr1b[, -c(1 : 4)]
-rownames(corr1c)[1 : 4] <- paste0("Road density, ", rep(c("Highway", "Local"), 2), "/",
-                                  c(rep(c("1km", "500m"), each = 2)) )
+corr1c <- data.frame(corr1c)
+corr1c <- mutate(corr1c, Variable = rownames(corr1c),
+                 Variable = ifelse(substr(Variable, 1, 2) == "RD", paste0("Road density: ", rep(c("Highway", "Local"), 2), ", ",
+                                  c(rep(c("1 km", "500 m"), each = 2))), Variable)) %>%
+  dplyr::select(Variable, everything())
+rownames(corr1c) <- NULL
+
 kable(corr1c, digits = 2)
 ```
 
-## Table S`r k`. Minimum, maximum, and quantiles (P25 = 25%ile, P50 = 50%ile, P75 = 75%ile) for road density (for highways and local roads at both 1 km and 500 m) and speed.
+## Table S`r k`. Quantiles (Q1, Q2, Q3, Q4) for road density (for highways and local roads at 1 km and 500 m resolution) and speed.
 
 ```{r}
 k <- k + 1
 ```
 
 ```{r}
-kable(quanttab[c(2 : 5, 1),], digits = 2)
+quant1 <- quanttab[c(2 : 5, 1),]
+quant1 <- mutate(quant1, Min = round(Min, 2),
+                 P25 = round(P25, 2),
+                 P50 = round(P50, 2),
+                 P75 = round(P75, 2),
+                 Max = round(Max, 2),
+                 Q1 = paste0("(", Min, ", ", P25, "]"),
+                 Q2 = paste0("(", P25, ", ", P50, "]"),
+                 Q3 = paste0("(", P50, ", ", P75, "]"),
+                 Q4 = paste0("(", P75, ", ", Max, "]")) %>%
+  dplyr::select(-c(Min : Max))
+kable(quant1, digits = 2)
 ```
 
 \elandscape
@@ -128,20 +147,22 @@ k <- 1
 ```
 
 
-## Figure S`r k`. Map of standardized road density in northern Virginia for highways and local roads at 500 m resolution.
+## Figure S`r k`. Map of standardized road density in the Washington, DC metropolitan area for A. highways and B. local roads at 500 m resolution.
 
 ```{r}
 k <- k + 1
 ```
 
 
-```{r}
-hw500 + ggtitle("A. Highway") +
-  loc500 + title("B. Local")
+```{r, cache = T}
+hw500 + ggtitle("A. Road density: Highway") +
+  theme(legend.title = element_text(size = 12), legend.text = element_text(size = 12), title = element_text(size = 10)) +
+  loc500 + ggtitle("B. Road density: Local") +
+  theme(legend.title = element_text(size = 12), legend.text = element_text(size = 12), title = element_text(size = 10))
 
 ```
 
-## Figure S`r k`. Distributions of in-vehicle PM$_{2.5}$ exposures ($\mu$g/m$^3$) for each participant (N=25) on the natural log scale, along with observation time in minutes.  Participants are ordered by their median personal PM$_{2.5}$ exposures across trips.
+## Figure S`r k`. Distributions of in-vehicle PM$_{2.5}$ exposures ($\mu$g/m$^3$) for each participant (N=25) on the natural log scale, along with observation time in minutes.  Participants are ordered by their median in-vehicle PM$_{2.5}$ exposures across trips.
 
 ```{r}
 k <- k + 1
@@ -215,7 +236,7 @@ pmtile
 
 ```
 
-## Figure S`r k`. Variation in road type (highway, ramp/tunnel, local connecting, and local roads) and speed (mph) over each observed trip (N=69).
+## Figure S`r k`. Variation in A. road type (highway, ramp/tunnel, local connecting, and local roads) and B. speed (mph) over each observed trip (N=69).
 
 ```{r}
 k <- k + 1
@@ -242,7 +263,8 @@ speed <- ggplot(rcomm1, aes(x = timemin, y = id2, fill = (mph))) +
   theme(text = element_text(size=12), axis.text.y = element_blank(),
         axis.ticks.y = element_blank(), legend.position = c(.75, .25))
 
-tripplot1 <- roadtype2 + speed
+tripplot1 <- roadtype2 + ggtitle("A. Road type") +
+  speed+ ggtitle("B. Speed")
 tripplot1[[2]] = tripplot1[[2]] + theme(axis.text.y = element_blank(),
                                         axis.ticks.y = element_blank(),
                                         axis.title.y = element_blank() )
@@ -267,9 +289,9 @@ rcomm1 <- tripplot[[2]]
 srness1 <- dplyr::select(rcomm1, ID, id2, timemin, contains("srness")) %>%
   pivot_longer(-c(ID, id2, timemin)) %>%
   dplyr::filter(name %in% c("srness500loc", "srness500hw")) %>%
-  mutate(name = case_when(name == "srness500loc" ~ "Local",
+  mutate(name = case_when(name == "srness500loc" ~ "Road density: Local",
                        
-                          name == "srness500hw" ~ "Highway")) 
+                          name == "srness500hw" ~ "Road density: Highway")) 
 
 
 
@@ -277,11 +299,9 @@ srness <- ggplot(srness1, aes(x = timemin, y = id2, fill = value)) +
   geom_tile() + ylab("Trip") + xlab("Minutes since trip start") +
  scale_fill_gradient2(name = "Road density", low = "#dedc59", high = "#5c3a85", mid = "white") +
   facet_wrap(~name) +
-  theme(text = element_text(size=12), axis.text.y = element_blank(),
+  theme(text = element_text(size=12),axis.text.y = element_blank(), 
         axis.ticks.y = element_blank(),
-        legend.position  = c(.9, .3))  + theme(axis.text.y = element_blank(),
-                                        axis.ticks.y = element_blank(),
-                                        axis.title.y = element_blank() )
+        legend.position  = c(.9, .3))  + theme( axis.text.y = element_blank(), axis.ticks.y = element_blank())
 
 srness
 
@@ -369,8 +389,7 @@ plot.windrose(winddir1)
 
 
 
-
-## Figure S`r k`. Associations of road density at 500 meters with in-vehicle PM$_{2.5}$ concentrations from linear mixed models comparing each quartile of road density (Q2, Q3, Q4) to the lowest quartile. Results include main (unadjusted) models as well as models that separately adjusted for meteorology, ambient PM$_{2.5}$, rush hour trips, and all road features.
+## Figure S`r k`. Associations of road density with in-vehicle PM$_{2.5}$ concentrations from linear mixed models reported as the change in log $\mu$g/m$^3$ (95% confidence intervals) comparing each quartile of road density (Q2, Q3, Q4) to the lowest quartile (Q1) for highways and local roads at 500 m resolution. Results include main (unadjusted) models as well as models that separately adjusted for meteorology, ambient PM$_{2.5}$, rush hour trips, and all road features.
 
 ```{r}
 k <- k + 1
@@ -383,7 +402,10 @@ q500m
 ```
 
 
-## Figure S`r k`. Associations of road type with in-vehicle PM$_{2.5}$ concentrations from linear mixed models, reported as the change in log $\mu$g/m$^3$ (95% confidence intervals) comparing travelling on highways, local connecting roads, and ramps/tunnels to local roads.  Results include main (unadjusted) models as well as models adjusted for meteorology, ambient PM$_{2.5}$, and rush hour trips, and all road features.
+
+
+
+## Figure S`r k`. Associations of road type with in-vehicle PM$_{2.5}$ concentrations from linear mixed models, reported as the change in log $\mu$g/m$^3$ (95% confidence intervals) comparing travelling on highways, local connecting roads, and ramps/tunnels to local roads.  Results include main (unadjusted) models as well as models that separately adjusted for meteorology, ambient PM$_{2.5}$, and rush hour trips, and all road features.
 
 ```{r}
 k <- k + 1
@@ -396,7 +418,8 @@ fig5
 ```
 
 
-## Figure S`r k`. Associations of speed with in-vehicle PM$_{2.5}$ concentrations from linear mixed models comparing each quartile of speed (Q2, Q3, Q4) to the lowest quartile. Results include main (unadjusted) models as well as models that separately adjusted for meteorology, ambient PM$_{2.5}$, rush hour trips, and all road features.
+
+## Figure S`r k`. Associations of speed with in-vehicle PM$_{2.5}$ concentrations from linear mixed models reported as the change in log $\mu$g/m$^3$ (95% confidence intervals) comparing each quartile of speed (Q2, Q3, Q4) to the lowest quartile (Q1). Results include main (unadjusted) models as well as models that separately adjusted for meteorology, ambient PM$_{2.5}$, rush hour trips, and all road features.
 
 
 ```{r}
@@ -410,16 +433,18 @@ qmph$fig
 ```
 
 
-
-## Figure S`r k`. Associations of of road density at 500 m with in-vehicle PM$_{2.5}$ concentrations from linear mixed models for main models (lag 0) and lags up to 10 minutes, comparing each quartile of road density (Q2, Q3, Q4) to the lowest quartile for highways and local roads.
+## Figure S`r k`. Associations of of road density with in-vehicle PM$_{2.5}$ concentrations from linear mixed models for main models (lag 0) and lags up to 10 minutes, reported as the change in log $\mu$g/m$^3$ (95% confidence intervals) comparing each quartile of road density (Q2, Q3, Q4) to the lowest quartile (Q1) for highways and local roads at 500 m resolution.
 
 
 ```{r}
 k <- k + 1
 ```
 
-
 ```{r}
+fh <- 6
+```
+
+```{r, fig.height = fh}
 roadlag500hw
 ```
 
@@ -427,28 +452,28 @@ roadlag500hw
 
 
 
-## Figure S`r k`. Associations of road type with in-vehicle PM$_{2.5}$ concentrations from linear mixed models for main models (lag 0) and lags up to 10 minutes, reported as the change in log $\mu$g/m$^3$ comparing travelling on highways, ramps/tunnels, and local connecting roads to local roads.  
+## Figure S`r k`. Associations of road type with in-vehicle PM$_{2.5}$ concentrations from linear mixed models for main models (lag 0) and lags up to 10 minutes, reported as the change in log $\mu$g/m$^3$ (95% confidence intervals) comparing travelling on highways, ramps/tunnels, and local connecting roads to local roads.  
 
 
 ```{r}
 k <- k + 1
 ```
 
-```{r}
+```{r, fig.height = 7}
 figs7
 
 ```
 
 
 
-## Figure S`r k`. Associations of speed with in-vehicle PM$_{2.5}$ concentrations from linear mixed models for main models (lag 0) and lags up to 10 minutes, comparing each quartile of speed (Q2, Q3, Q4) to the lowest quartile.
+## Figure S`r k`. Associations of speed with in-vehicle PM$_{2.5}$ concentrations from linear mixed models for main models (lag 0) and lags up to 10 minutes, reported as the change in log $\mu$g/m$^3$ (95% confidence intervals) comparing each quartile of speed (Q2, Q3, Q4) to the lowest quartile (Q1).
 
 
 ```{r}
 k <- k + 1
 ```
 
-```{r}
+```{r, fig.height = fh}
 mphlag
 
 ```
