@@ -117,7 +117,7 @@ hw1 + ggtitle("A. Road density: Highway") +
   loc1 + ggtitle("B. Road density: Local") +
   theme(legend.title = element_text(size = 12), legend.text = element_text(size = 12), title = element_text(size = 10))
 
-ggsave(file = here("figures/fig1-v2.png"), width = 8, height = 3.5)
+ggsave(file = here("figures/fig1-v2.pdf"), width = 8, height = 3.5)
 
 ```
 
@@ -152,7 +152,7 @@ srness <- ggplot(srness1, aes(x = timemin, y = id2, fill = value)) +
                                         legend.title = element_text(size = 10))
 
 srness
-ggsave(file = here("figures/fig2-v2.png"), width = 5.5, height = 3.5)
+ggsave(file = here("figures/fig2-v2.pdf"), width = 5.5, height = 3.5)
 
 ```
 
@@ -168,7 +168,7 @@ k <- k + 1
 ```{r}
 rtypecorr 
 
-ggsave(file = here("figures/fig3-v2.png"), width = 6, height = 3.5)
+ggsave(file = here("figures/fig3-v2.pdf"), width = 6, height = 3.5)
 ```
 
 
@@ -183,7 +183,7 @@ k <- k + 1
 ```{r}
 q1km
 
-ggsave(file = here("figures/fig4-v2.png"), width = 6, height = 3.5)
+ggsave(file = here("figures/fig4-v2.pdf"), width = 6, height = 3.5)
 
 ```
 
@@ -199,7 +199,7 @@ k <- k + 1
 ```{r}
 roadlag1hw 
 
-ggsave(file = here("figures/fig5-v2.png"), width = 6, height = 6)
+ggsave(file = here("figures/fig5-v2.pdf"), width = 6, height = 6)
 
 ```
 
