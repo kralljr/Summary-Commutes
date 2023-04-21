@@ -161,12 +161,13 @@ q500tab1 <- dplyr::filter(q500tab, name == "Main") %>%
   mutate(Resolution = "500 m")
 q1tab1 <- dplyr::filter(q1tab, name == "Main") %>%
   mutate(Resolution = "1 km")
+r1 <- 2
 qsrnesstab <- full_join(q500tab1, q1tab1) %>%
   dplyr::select(term, estimate, conf.low, conf.high, type, Resolution) %>%
   rename(Road = type) %>%
-  mutate(estimate = round(estimate, 2),
-         conf.low = round(conf.low, 2),
-         conf.high = round(conf.high, 2),
+  mutate(estimate = round(estimate, r1),
+         conf.low = round(conf.low, r1),
+         conf.high = round(conf.high, r1),
          estCI = paste0(estimate, " (", conf.low, ", ", conf.high, ")")) %>%
   dplyr::select(term, estCI, Road, Resolution) %>%
   pivot_wider(names_from = "term", values_from = "estCI") 
