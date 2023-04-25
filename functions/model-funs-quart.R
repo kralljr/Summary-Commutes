@@ -125,6 +125,42 @@ lmequart <- function(rcommsr, name, name2) {
 
 
 
+
+lmequartdow <- function(rcommsr, name, name2) {
+  eqn1 <- paste0("lPM ~ ", name)
+  res1 <- get_lmeQ(rcommsr, iqrs, eqn1, re = "~ 1| ID / id3")
+
+  eqn2b <- paste0("lPM ~ ", name, " + awnd + prcpbin +
+               tmax  + tmin +  RH +
+               cat5sm + snowbin")
+  res2b <- get_lmeQ(rcommsr, iqrs, eqn2b, re = "~ 1| ID / id3")
+
+  eqn2 <- paste0("lPM ~ ", name, " + awnd + prcpbin +
+               tavg +  RH +
+               cat5sm + snowbin")
+  res2 <- get_lmeQ(rcommsr, iqrs, eqn2, re = "~ 1| ID / id3")
+
+  eqn3 <- paste0("lPM ~ ", name, " + daily  + obsdiff")
+  res3 <- get_lmeQ(rcommsr, iqrs, eqn3, re = "~ 1| ID / id3")
+
+  eqn4 <- paste0("lPM ~ ", name, " + dow")
+  rcommsr <- mutate(rcommsr, dow = wday(date_local, label = T))
+  res4 <- get_lmeQ(rcommsr, iqrs, eqn4, re = "~ 1| ID / id3")
+
+  eqn5 <- paste0("lPM ~ ", name, " + rtype +", name2)
+  res5 <- get_lmeQ(rcommsr, iqrs, eqn5, re = "~ 1| ID / id3")
+
+  resl <- list(Main = res1,  Meteorology = res2, `Ambient PM2.5` = res3,
+               Rush = res4, `All road features` = res5)
+
+
+
+  resl
+}
+
+
+
+
 plot_cat_sensQ <- function(reslist, myterm) {
   nc <- nchar(myterm)
   list1 <- lapply(reslist, function(x) filter(x$t1, substr(term, 1, nc) == myterm))
