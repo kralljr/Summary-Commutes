@@ -172,7 +172,7 @@ qsrnesstab <- full_join(q500tab1, q1tab1) %>%
   dplyr::select(term, estCI, Road, Resolution) %>%
   pivot_wider(names_from = "term", values_from = "estCI") 
 
-qsrnesstab
+qsrnesstab %>%kable()
 ```
 
 ## Adjust for other roadiness (local or highway)
