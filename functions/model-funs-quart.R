@@ -6,16 +6,24 @@ get_lmeQ <- function(data1, iqrs, eqn1, rer = "~timemin | ID / id3",
   # get correlation
   if(corr) {
     #
-    #cs1 <- corARMA(form = formula(rer), p = 1, q = 1)
-    cs1 <- corAR1(form = formula(rer))
-    cs1 <- Initialize(cs1, data = data1)
+    #this is not correct
+    # cs1 <- corAR1(form = formula(rer))
+    # cs1 <- Initialize(cs1, data = data1)
+    #
+    # Fit model
+    lme1 <- lme(formula(eqn1),
+                random= formula(re),
+                data=data1, correlation= corAR1(form = formula(rer)))
+
+    # lme1 <- lme(lPM ~ qsrness1hw,
+    #             random= ~1 | ID / id3,
+    #             data=data1, correlation= corAR1(form = ~timemin | ID / id3))
   } else {
-    cs1 <- NULL
+    lme1 <- lme(formula(eqn1),
+                random= formula(re),
+                data=data1)
   }
-  # Fit model
-  lme1 <- lme(formula(eqn1),
-              random= formula(re),
-              data=data1, correlation= cs1)
+
 
   # Get residuals
   lme1b <- augment(lme1)

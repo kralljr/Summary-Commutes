@@ -1,0 +1,204 @@
+---
+title: 'Check impact of window use'
+author: "Jenna Krall"
+date: "10/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(knitr)
+library(splines)
+library(here)
+library(lme4)
+library(broom.mixed)
+library(ggthemes)
+library(nlme)
+library(forcats)
+library(gtools)
+library(patchwork)
+library(RColorBrewer)
+library(lubridate)
+# library(lmeInfo)
+
+source(here("functions/model-funs.R"))
+
+source(here("functions/model-funs-quart.R"))
+load(here("data/rcomm2.RData"))
+load(here("data/iqrs.RData"))
+load(here("data/rcommQ.RData"))
+```
+
+
+
+
+# Adjust for weekday
+
+- Labelled as rush
+
+# Roadiness
+
+
+## 1km res
+
+```{r}
+lme1 <- lmequartdow(rcommQ, "qsrness1loc", "qmph")
+p1 <- plot_cat_sensQ(lme1, "qsrness1loc")
+
+
+lme1 <- lmequartdow(rcommQ, "qsrness1hw", "qmph")
+p2 <- plot_cat_sensQ(lme1, "qsrness1hw")
+
+p1tab <- p1$tab %>% mutate(type = "Road density: Local")
+p2tab <- p2$tab %>% mutate(type = "Road density: Highway")
+
+pall <- full_join(p1tab, p2tab)
+q1tab <- pall
+q1km <- plot2(pall)
+q1km
+
+```
+
+
+
+## 500 m res
+
+```{r}
+lme1 <- lmequartdow(rcommQ, "qsrness500loc", "qmph")
+p1 <- plot_cat_sensQ(lme1, "qsrness500loc")
+
+
+lme1 <- lmequartdow(rcommQ, "qsrness500hw", "qmph")
+p2 <- plot_cat_sensQ(lme1, "qsrness500hw")
+
+p1tab <- p1$tab %>% mutate(type = "Road density: Local")
+p2tab <- p2$tab %>% mutate(type = "Road density: Highway")
+
+pall <- full_join(p1tab, p2tab)
+q500tab <- pall
+
+q500m <- plot2(pall)
+q500m
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Find window users
+
+```{r}
+ids <- dplyr::select(rcommQ, ID) %>% unique()
+# GMU1016, GMU1018
+idsrm <- paste0("GMU101", c(6, 8))
+rcommQ <- dplyr::filter(rcommQ, !(ID %in% idsrm))
+```
+
+# Roadiness
+
+
+## 1km res
+
+```{r}
+lme1 <- lmequart(rcommQ, "qsrness1loc", "qmph")
+p1 <- plot_cat_sensQ(lme1, "qsrness1loc")
+
+
+lme1 <- lmequart(rcommQ, "qsrness1hw", "qmph")
+p2 <- plot_cat_sensQ(lme1, "qsrness1hw")
+
+p1tab <- p1$tab %>% mutate(type = "Road density: Local")
+p2tab <- p2$tab %>% mutate(type = "Road density: Highway")
+
+pall <- full_join(p1tab, p2tab)
+q1tab <- pall
+q1km <- plot2(pall)
+q1km
+
+```
+
+
+
+## 500 m res
+
+```{r}
+lme1 <- lmequart(rcommQ, "qsrness500loc", "qmph")
+p1 <- plot_cat_sensQ(lme1, "qsrness500loc")
+
+
+lme1 <- lmequart(rcommQ, "qsrness500hw", "qmph")
+p2 <- plot_cat_sensQ(lme1, "qsrness500hw")
+
+p1tab <- p1$tab %>% mutate(type = "Road density: Local")
+p2tab <- p2$tab %>% mutate(type = "Road density: Highway")
+
+pall <- full_join(p1tab, p2tab)
+q500tab <- pall
+
+q500m <- plot2(pall)
+q500m
+
+```
+
+
+### Table of results
+
+```{r}
+q500tab1 <- dplyr::filter(q500tab, name == "Main") %>%
+  mutate(Resolution = "500 m")
+q1tab1 <- dplyr::filter(q1tab, name == "Main") %>%
+  mutate(Resolution = "1 km")
+qsrnesstab <- full_join(q500tab1, q1tab1) %>%
+  dplyr::select(term, estimate, conf.low, conf.high, type, Resolution) %>%
+  rename(Road = type) %>%
+  mutate(estimate = round(estimate, 2),
+         conf.low = round(conf.low, 2),
+         conf.high = round(conf.high, 2),
+         estCI = paste0(estimate, " (", conf.low, ", ", conf.high, ")")) %>%
+  dplyr::select(term, estCI, Road, Resolution) %>%
+  pivot_wider(names_from = "term", values_from = "estCI") 
+
+qsrnesstab
+```
+
+## Adjust for other roadiness (local or highway)
+
+```{r}
+lme1 <- lmequart(rcommQ, "qsrness1loc", "qsrness1hw")
+p1 <- plot_cat_sensQ(lme1, "qsrness1loc")
+p1$fig
+
+lme1 <- lmequart(rcommQ, "qsrness1hw", "qsrness1loc")
+p2 <- plot_cat_sensQ(lme1, "qsrness1hw")
+p2$fig
+
+
+lme1 <- lmequart(rcommQ, "qsrness500loc", "qsrness500hw")
+p1 <- plot_cat_sensQ(lme1, "qsrness500loc")
+p1$fig
+
+lme1 <- lmequart(rcommQ, "qsrness500hw", "qsrness500loc")
+p2 <- plot_cat_sensQ(lme1, "qsrness500hw")
+p2$fig
+
+```
+
+
+
+
+

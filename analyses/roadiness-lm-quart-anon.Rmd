@@ -1,0 +1,273 @@
+---
+title: 'Regression sensivity: quartiles'
+author: "Jenna Krall"
+date: "10/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(knitr)
+library(splines)
+library(here)
+library(lme4)
+library(broom.mixed)
+library(ggthemes)
+library(nlme)
+library(forcats)
+library(gtools)
+library(patchwork)
+library(RColorBrewer)
+# library(lmeInfo)
+
+source(here("functions/model-funs.R"))
+
+source(here("functions/model-funs-quart.R"))
+
+
+# load anonymous data
+source(here("rcode/anon-data.R"))
+rcommQ <- read.csv(here("data/roadden.csv"))
+rcommQ <- rename(rcommQ, id3 = commid) %>%
+  mutate(lPM = log(PM + 0.01))
+rcommQ0 <- rcommQ
+
+# load iqrs
+load(here("data/iqrs.RData"))
+
+```
+
+
+
+
+# Test 1
+
+Works when correlation is disabled, for all results
+
+# Test 2
+
+Works with sorted random ID, sorted random date, full correlation for all results
+
+# Test 3 
+
+- try unsorted, but still length 3: DOES NOT WORK
+- Sorted date, not sorted ID: Does not work 
+- Sorted ID, not sorted date: Does not work 
+- using corAR1() instead of initializing does same thing
+- using update instead of initializing does the same thing
+
+# Test 4
+
+Some issue with the observation order in corrStruc
+
+- fine if use paste(ID, id3) only with update vs. initialize
+
+```{r}
+eval1 <- T
+```
+
+```{r, eval = eval1}
+load(here("data/rcommQ.RData"))
+rcommQ <- mutate(rcommQ, id3 = paste0(ID, id3))%>%    arrange(desc(ID), desc(id3), timemin)
+print(head(unique(rcommQ$ID)))
+print(head(unique(rcommQ$id3)))
+
+lme1 <- lmequart(rcommQ, "qsrness1hw", "qmph")
+lme1$t1[1 : 3, c(3, 4, 8 : 10)] 
+t1 <- lme1$Main$t1[1 : 3, c(3, 4, 8 : 10)]
+t1 %>% mutate(estimate = round(estimate, 2))
+```
+
+
+```{r, eval = eval1}
+rcommQ <- rcommQ0
+# rcommQ <- mutate(rcommQ, id3 = paste0(ID, id3))%>%    arrange(desc(ID), desc(id3), timemin)
+
+print(head(unique(rcommQ$ID)))
+print(head(unique(rcommQ$id3)))
+
+lme1 <- lmequart(rcommQ, "qsrness1hw", "qmph")
+# lme1$t1[1 : 3, c(3, 4, 8 : 10)] 
+
+t1 <- lme1$Main$t1[1 : 3, c(3, 4, 8 : 10)]
+t1 %>% mutate(estimate = round(estimate, 2))
+```
+
+
+
+```{r}
+
+```
+
+# Full
+
+
+# Roadiness
+
+
+## 1km res
+
+
+```{r}
+rcommQ <- rcommQ0
+lme1 <- lmequart(rcommQ, "qsrness1loc", "qmph")
+p1 <- plot_cat_sensQ(lme1, "qsrness1loc")
+
+
+lme1 <- lmequart(rcommQ, "qsrness1hw", "qmph")
+p2 <- plot_cat_sensQ(lme1, "qsrness1hw")
+
+p1tab <- p1$tab %>% mutate(type = "Road density: Local")
+p2tab <- p2$tab %>% mutate(type = "Road density: Highway")
+
+pall <- full_join(p1tab, p2tab)
+q1tab <- pall
+q1km <- plot2(pall)
+q1km
+
+```
+
+
+
+## 500 m res
+
+```{r}
+lme1 <- lmequart(rcommQ, "qsrness500loc", "qmph")
+p1 <- plot_cat_sensQ(lme1, "qsrness500loc")
+
+
+lme1 <- lmequart(rcommQ, "qsrness500hw", "qmph")
+p2 <- plot_cat_sensQ(lme1, "qsrness500hw")
+
+p1tab <- p1$tab %>% mutate(type = "Road density: Local")
+p2tab <- p2$tab %>% mutate(type = "Road density: Highway")
+
+pall <- full_join(p1tab, p2tab)
+q500tab <- pall
+
+q500m <- plot2(pall)
+q500m
+```
+
+
+### Table of results
+
+```{r}
+q500tab1 <- dplyr::filter(q500tab, name == "Main") %>%
+  mutate(Resolution = "500 m")
+q1tab1 <- dplyr::filter(q1tab, name == "Main") %>%
+  mutate(Resolution = "1 km")
+r1 <- 2
+qsrnesstab <- full_join(q500tab1, q1tab1) %>%
+  dplyr::select(term, estimate, conf.low, conf.high, type, Resolution) %>%
+  rename(Road = type) %>%
+  mutate(estimate = round(estimate, r1),
+         conf.low = round(conf.low, r1),
+         conf.high = round(conf.high, r1),
+         estCI = paste0(estimate, " (", conf.low, ", ", conf.high, ")")) %>%
+  dplyr::select(term, estCI, Road, Resolution) %>%
+  pivot_wider(names_from = "term", values_from = "estCI") 
+
+qsrnesstab %>% kable()
+```
+
+
+
+
+# Old data
+
+
+## 1km res
+
+
+```{r}
+load(here("data/rcommQ.RData"))
+lme1 <- lmequart(rcommQ, "qsrness1loc", "qmph")
+p1 <- plot_cat_sensQ(lme1, "qsrness1loc")
+
+
+lme1 <- lmequart(rcommQ, "qsrness1hw", "qmph")
+p2 <- plot_cat_sensQ(lme1, "qsrness1hw")
+
+p1tab <- p1$tab %>% mutate(type = "Road density: Local")
+p2tab <- p2$tab %>% mutate(type = "Road density: Highway")
+
+pall <- full_join(p1tab, p2tab)
+q1tab <- pall
+q1km <- plot2(pall)
+
+```
+
+
+
+## 500 m res
+
+```{r}
+lme1 <- lmequart(rcommQ, "qsrness500loc", "qmph")
+p1 <- plot_cat_sensQ(lme1, "qsrness500loc")
+
+
+lme1 <- lmequart(rcommQ, "qsrness500hw", "qmph")
+p2 <- plot_cat_sensQ(lme1, "qsrness500hw")
+
+p1tab <- p1$tab %>% mutate(type = "Road density: Local")
+p2tab <- p2$tab %>% mutate(type = "Road density: Highway")
+
+pall <- full_join(p1tab, p2tab)
+q500tab <- pall
+
+q500m <- plot2(pall)
+
+```
+
+
+### Table of results
+
+```{r}
+q500tab1 <- dplyr::filter(q500tab, name == "Main") %>%
+  mutate(Resolution = "500 m")
+q1tab1 <- dplyr::filter(q1tab, name == "Main") %>%
+  mutate(Resolution = "1 km")
+r1 <- 2
+qsrnesstab <- full_join(q500tab1, q1tab1) %>%
+  dplyr::select(term, estimate, conf.low, conf.high, type, Resolution) %>%
+  rename(Road = type) %>%
+  mutate(estimate = round(estimate, r1),
+         conf.low = round(conf.low, r1),
+         conf.high = round(conf.high, r1),
+         estCI = paste0(estimate, " (", conf.low, ", ", conf.high, ")")) %>%
+  dplyr::select(term, estCI, Road, Resolution) %>%
+  pivot_wider(names_from = "term", values_from = "estCI") 
+
+qsrnesstab %>% kable()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Speed
+
+```{r, eval = F}
+lme1 <- lmequart(rcommQ, "qmph", "qsrness1hw")
+qmph <- plot_cat_sensQ(lme1, "qmph")
+qmph$fig
+```
+
+
+
