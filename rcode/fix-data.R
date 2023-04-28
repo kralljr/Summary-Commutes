@@ -101,7 +101,7 @@ rcomm2 <- mutate(rcomm,
 
 
                 #### LOG PM
-                lPM = log(PM + 0.01),
+                lPM = log(PM + 0.05),
 
                 ### Units of weather
                 # originally tenths m/s or tenths of degC

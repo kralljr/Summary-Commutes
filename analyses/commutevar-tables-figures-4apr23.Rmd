@@ -33,11 +33,11 @@ load(here("figures/eda-tabfig.RData"))
 # from figure2.R
 load(here("figures/fighourly.RData"))
 
-# paired analysis
-load(file.path(figloc, "figpaired.RData"))
+# paired analysis: NOT NEEDED, not rerun
+# load(file.path(figloc, "figpaired.RData"))
 
-# masstime
-load(here("results/masstime.RData"))
+# masstime: NOT NEEDED, not rerun
+# load(here("results/masstime.RData"))
 
 
 # lm res

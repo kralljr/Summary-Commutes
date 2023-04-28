@@ -159,10 +159,13 @@ dplyr::select(rcommLM, ID, id3, rushmorn, rusheven) %>%
 # Roadiness and speed
 
 ```{r}
-dplyr::select(rcommLM, ID, id3, mph, srness) %>%
+dplyr::select(rcommLM, ID, id3, mph, srness1loc, srness500loc, srness1hw, srness500hw) %>%
   #group_by(ID) %>%
   summarize(speed = mean(mph), speedsd = sd(mph),
-            msrness = mean(srness), srnesssd = sd(srness),
+            msrness500loc = mean(srness500loc), srnesssd500loc = sd(srness500loc),
+                        msrness1hw = mean(srness1hw), srnesssd1hw = sd(srness1hw),
+                        msrness500hw = mean(srness500hw), srnesssd = sd(srness500hw),
+                        msrness1loc = mean(srness1loc), srnesssd = sd(srness1loc),
             minspeed = min(mph), maxspeed = max(mph))
 
 ```

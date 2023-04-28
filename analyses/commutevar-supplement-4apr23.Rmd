@@ -40,15 +40,15 @@ load(here("results/supp-plots.RData"))
 # gps plot data
 load(here("results/gpsplotdata.RData"))
 
-# masstime
-load(here("results/masstime.RData"))
+# masstime: NOTE THIS IS NOT UPDATED
+# load(here("results/masstime.RData"))
 
 # lag figs
 load(here("results/lmfig.RData"))
 
 
-# icc
-load(here("results/icc.RData"))
+# icc : NOT UPDATED/NEEDED
+# load(here("results/icc.RData"))
 
 
 # reject ER changes

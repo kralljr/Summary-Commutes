@@ -78,7 +78,7 @@ This repository is forked from Gabriella Armada's work <https://github.com/gabia
 
     - Input: rcomm.RData, speed.RData
     - Needed to be fixed to handle new roadiness metrics
-    - Output: rcomm2.RData (includes formatted for lm)
+    - Output: rcomm2.RData (includes formatted for lm): note PM shifted by 0.05 (smallest PM value is 0.1)
     
 12. iqrs-weath.R: File to create IQRs for interpreting lm results
 
