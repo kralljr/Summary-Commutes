@@ -34,7 +34,7 @@ source(here("functions/model-funs-quart.R"))
 source(here("rcode/anon-data.R"))
 rcommQ <- read.csv(here("data/roadden.csv"))
 rcommQ <- rename(rcommQ, id3 = commid) %>%
-  mutate(lPM = log(PM + 0.01))
+  mutate(lPM = log(PM + 0.05))
 rcommQ0 <- rcommQ
 
 # load iqrs
@@ -179,6 +179,79 @@ qsrnesstab %>% kable()
 
 
 
+# Reorder
+
+
+# Roadiness
+
+
+## 1km res
+
+
+```{r}
+rcommQ <- rcommQ0 %>% arrange(desc(ID), id3)
+lme1 <- lmequart(rcommQ, "qsrness1loc", "qmph")
+p1 <- plot_cat_sensQ(lme1, "qsrness1loc")
+
+
+lme1 <- lmequart(rcommQ, "qsrness1hw", "qmph")
+p2 <- plot_cat_sensQ(lme1, "qsrness1hw")
+
+p1tab <- p1$tab %>% mutate(type = "Road density: Local")
+p2tab <- p2$tab %>% mutate(type = "Road density: Highway")
+
+pall <- full_join(p1tab, p2tab)
+q1tab <- pall
+q1km <- plot2(pall)
+q1km
+
+```
+
+
+
+## 500 m res
+
+```{r}
+lme1 <- lmequart(rcommQ, "qsrness500loc", "qmph")
+p1 <- plot_cat_sensQ(lme1, "qsrness500loc")
+
+
+lme1 <- lmequart(rcommQ, "qsrness500hw", "qmph")
+p2 <- plot_cat_sensQ(lme1, "qsrness500hw")
+
+p1tab <- p1$tab %>% mutate(type = "Road density: Local")
+p2tab <- p2$tab %>% mutate(type = "Road density: Highway")
+
+pall <- full_join(p1tab, p2tab)
+q500tab <- pall
+
+q500m <- plot2(pall)
+q500m
+```
+
+
+### Table of results
+
+```{r}
+q500tab1 <- dplyr::filter(q500tab, name == "Main") %>%
+  mutate(Resolution = "500 m")
+q1tab1 <- dplyr::filter(q1tab, name == "Main") %>%
+  mutate(Resolution = "1 km")
+r1 <- 2
+qsrnesstab <- full_join(q500tab1, q1tab1) %>%
+  dplyr::select(term, estimate, conf.low, conf.high, type, Resolution) %>%
+  rename(Road = type) %>%
+  mutate(estimate = round(estimate, r1),
+         conf.low = round(conf.low, r1),
+         conf.high = round(conf.high, r1),
+         estCI = paste0(estimate, " (", conf.low, ", ", conf.high, ")")) %>%
+  dplyr::select(term, estCI, Road, Resolution) %>%
+  pivot_wider(names_from = "term", values_from = "estCI") 
+
+qsrnesstab %>% kable()
+```
+
+
 # Old data
 
 
@@ -187,6 +260,86 @@ qsrnesstab %>% kable()
 
 ```{r}
 load(here("data/rcommQ.RData"))
+lme1 <- lmequart(rcommQ, "qsrness1loc", "qmph")
+p1 <- plot_cat_sensQ(lme1, "qsrness1loc")
+
+
+lme1 <- lmequart(rcommQ, "qsrness1hw", "qmph")
+p2 <- plot_cat_sensQ(lme1, "qsrness1hw")
+
+p1tab <- p1$tab %>% mutate(type = "Road density: Local")
+p2tab <- p2$tab %>% mutate(type = "Road density: Highway")
+
+pall <- full_join(p1tab, p2tab)
+q1tab <- pall
+q1km <- plot2(pall)
+
+```
+
+
+
+## 500 m res
+
+```{r}
+lme1 <- lmequart(rcommQ, "qsrness500loc", "qmph")
+p1 <- plot_cat_sensQ(lme1, "qsrness500loc")
+
+
+lme1 <- lmequart(rcommQ, "qsrness500hw", "qmph")
+p2 <- plot_cat_sensQ(lme1, "qsrness500hw")
+
+p1tab <- p1$tab %>% mutate(type = "Road density: Local")
+p2tab <- p2$tab %>% mutate(type = "Road density: Highway")
+
+pall <- full_join(p1tab, p2tab)
+q500tab <- pall
+
+q500m <- plot2(pall)
+
+```
+
+
+### Table of results
+
+```{r}
+q500tab1 <- dplyr::filter(q500tab, name == "Main") %>%
+  mutate(Resolution = "500 m")
+q1tab1 <- dplyr::filter(q1tab, name == "Main") %>%
+  mutate(Resolution = "1 km")
+r1 <- 2
+qsrnesstab <- full_join(q500tab1, q1tab1) %>%
+  dplyr::select(term, estimate, conf.low, conf.high, type, Resolution) %>%
+  rename(Road = type) %>%
+  mutate(estimate = round(estimate, r1),
+         conf.low = round(conf.low, r1),
+         conf.high = round(conf.high, r1),
+         estCI = paste0(estimate, " (", conf.low, ", ", conf.high, ")")) %>%
+  dplyr::select(term, estCI, Road, Resolution) %>%
+  pivot_wider(names_from = "term", values_from = "estCI") 
+
+qsrnesstab %>% kable()
+```
+
+
+
+
+
+
+
+
+
+
+
+# Old data: reordered
+
+
+## 1km res
+
+
+```{r}
+load(here("data/rcommQ.RData"))
+rcommQ <- rcommQ %>%
+  arrange(desc(ID), desc(id3))
 lme1 <- lmequart(rcommQ, "qsrness1loc", "qmph")
 p1 <- plot_cat_sensQ(lme1, "qsrness1loc")
 
