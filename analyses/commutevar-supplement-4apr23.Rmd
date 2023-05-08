@@ -203,7 +203,9 @@ perc <- mutate(perc, rtype = factor(rtype, levels = c("High/SecHigh", "Other", "
 
 roadtypep <- ggplot(perc, aes(x= rtype, y = fct_inorder(ID), fill= perc)) + 
   geom_tile() +
-  scale_fill_gradient(low = "white", high = "red", name = "Percent") +
+  scale_fill_gradient(low = "white", high = "red", name = "Percent", breaks = c(0, 25, 50, 75, 100),
+                      labels =  paste0(c(0, 25, 50, 75, 100),  "%"),
+                      limits = c(0, 100)) +
   xlab("") + ylab("Participant") +
   theme(text = element_text(size=12), axis.text.y = element_blank())
 
