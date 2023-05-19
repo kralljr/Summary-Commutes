@@ -1,13 +1,15 @@
 ---
-title: "Short-term associations of road density and road features with in-vehicle PM2.5 during
-  daily trips"
+title: "Short-term associations of road density and road features with in-vehicle
+  PM2.5 during daily trips"
 subtitle: Main text figures
 output:
-  pdf_document:
+  word_document:
     toc: yes
-    keep_tex: true
   html_document:
     toc: yes
+  pdf_document:
+    toc: yes
+    keep_tex: yes
 ---
 
 ```{r setup, include=FALSE}
